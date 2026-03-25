@@ -6,6 +6,7 @@
   <title>Bob</title>
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#6366f1" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Bob" />
@@ -1106,7 +1107,14 @@ function initFirebase() {
   try {
     const app = firebase.initializeApp(cfg);
     BOB_DB = firebase.firestore(app);
-    BOB_DB.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+    // Use new cache API (enablePersistence is deprecated in Firebase 9+)
+    try {
+      firebase.firestore.setLogLevel('error');
+    } catch(e) {}
+    BOB_DB.settings({ cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED });
+    BOB_DB.enableMultiTabIndexedDbPersistence().catch(() => {
+      BOB_DB.enableIndexedDbPersistence().catch(() => {});
+    });
 
     // Real-time listener — updates all open tabs/devices instantly
     BOB_DB.collection('bob').doc(FB_DOC).onSnapshot(doc => {

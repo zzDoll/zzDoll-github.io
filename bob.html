@@ -314,8 +314,7 @@
     /* ── TASK CARDS ── */
     .task-card {
       background: var(--card); border: 1px solid var(--border); border-left: 3px solid var(--task-bar);
-      border-radius: 8px; padding: 8px 11px; margin-bottom: 5px;
-      display: flex; align-items: flex-start; gap: 9px;
+      border-radius: 8px; padding: 10px 13px; margin-bottom: 6px;
       transition: box-shadow .15s, opacity .2s;
     }
     .task-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,.07); }
@@ -323,9 +322,10 @@
     .task-card.done .task-title { text-decoration: line-through; color: var(--muted); }
     .task-card.urg   { border-left-color: var(--urgent); }
     .task-card.hi    { border-left-color: var(--high); }
+    .task-top-row { display: flex; align-items: flex-start; gap: 7px; margin-bottom: 5px; }
 
     .check {
-      width: 17px; height: 17px; border-radius: 50%; border: 2px solid var(--border);
+      width: 17px; height: 17px; border-radius: 50%; border: 2px solid var(--border); flex-shrink: 0;
       cursor: pointer; flex-shrink: 0; margin-top: 1px;
       display: flex; align-items: center; justify-content: center; transition: all .15s;
     }
@@ -333,8 +333,8 @@
     .check.chk { background: var(--done); border-color: var(--done); }
 
     .task-body { flex: 1; min-width: 0; }
-    .task-title { font-size: 13px; font-weight: 500; line-height: 1.4; margin-bottom: 4px; word-break: break-word; }
-    .task-meta  { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+    .task-title { font-size: 13px; font-weight: 500; line-height: 1.4; word-break: break-word; }
+    .task-meta  { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
     .task-notes-snip { font-size: 11px; color: #9ca3af; margin-top: 4px; cursor: pointer; line-height: 1.4; }
     .task-notes-area {
       width: 100%; margin-top: 6px; padding: 6px 9px; border: 1px solid var(--border);
@@ -342,7 +342,7 @@
       min-height: 46px; font-family: inherit; line-height: 1.5;
     }
     .task-notes-area:focus { outline: none; border-color: var(--accent); }
-    .task-actions { display: flex; gap: 4px; flex-shrink: 0; opacity: 0; transition: opacity .15s; align-items: flex-start; padding-top: 1px; }
+    .task-actions { display: flex; gap: 4px; flex-wrap: wrap; opacity: 0; transition: opacity .15s; align-items: center; margin-top: 6px; }
     .task-card:hover .task-actions { opacity: 1; }
 
     /* ── SHARED BADGES / ACTIONS ── */
@@ -400,6 +400,42 @@
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
     .col-init::-webkit-scrollbar-thumb { background: #4338ca; }
+
+    /* ── CALL NOTES TOGGLE BUTTON ── */
+    .type-btn.t-call { border-color:#059669; color:#064e3b; background:#ecfdf5; }
+
+    /* ── CALL NOTES INLINE CONTACT LIST ── */
+    .cn-contact-btn { display:flex; align-items:center; gap:8px; width:100%; padding:9px 14px;
+      border:none; background:none; cursor:pointer; color:#d1fae5; font-size:12.5px;
+      text-align:left; border-left:3px solid transparent; transition:background .12s; }
+    .cn-contact-btn:hover { background:rgba(255,255,255,.08); }
+    .cn-contact-btn.active { background:rgba(255,255,255,.13); border-left-color:#6ee7b7; color:#fff; font-weight:600; }
+    .cn-avatar { width:28px; height:28px; border-radius:50%; background:#065f46; display:flex;
+      align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; color:#fff; }
+    .cn-cnt { font-size:10px; background:rgba(0,0,0,.3); color:#6ee7b7; border-radius:10px; padding:1px 5px; margin-left:auto; }
+
+    /* ── CALL NOTES CONTENT ── */
+    .cn-person-hdr { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+    .cn-big-avatar { width:46px; height:46px; border-radius:50%; background:linear-gradient(135deg,#059669,#047857);
+      display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700; color:#fff; flex-shrink:0; }
+    .cn-section-lbl { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em;
+      color:#6b7280; margin-bottom:8px; margin-top:18px; }
+    .cn-topic-item { display:flex; align-items:flex-start; gap:8px; background:#fff;
+      border:1.5px solid #e1e5eb; border-radius:7px; padding:8px 10px; margin-bottom:6px; }
+    .cn-topic-item.done { opacity:.5; }
+    .cn-check { width:15px; height:15px; border-radius:3px; border:1.5px solid #d1d5db;
+      cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+      font-size:9px; margin-top:1px; }
+    .cn-check.checked { background:#059669; border-color:#059669; color:#fff; }
+    .cn-topic-text { flex:1; font-size:13px; outline:none; }
+    .cn-remove { font-size:11px; color:#d1d5db; cursor:pointer; padding:1px 4px;
+      border:none; background:none; border-radius:3px; }
+    .cn-remove:hover { color:#ef4444; }
+    .cn-log { width:100%; min-height:80px; padding:8px 10px; border:1.5px solid #e1e5eb;
+      border-radius:7px; font-size:12.5px; font-family:inherit; resize:vertical; background:#fff; }
+    .cn-log:focus { outline:none; border-color:#059669; }
+    .cn-save-btn { margin-top:6px; padding:5px 14px; background:#059669; color:#fff;
+      border:none; border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; }
 
     /* ── DEADLINE BADGES ── */
     .deadline-badge { padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; }
@@ -463,6 +499,7 @@
     <div class="type-toggle">
       <button id="btnTask" class="type-btn t-task" onclick="setAddType('task')">✅ Task</button>
       <button id="btnProj" class="type-btn"        onclick="setAddType('project')">📋 Project</button>
+      <button id="btnCall" class="type-btn"        onclick="setAddType('callnotes')" style="border-color:#059669;color:#065f46">📞 Call Notes</button>
     </div>
 
     <!-- Project picker (visible when adding a task) -->
@@ -500,13 +537,20 @@
       <span id="syncLbl">Loading…</span>
     </div>
 
-    <!-- Navigate to Delegated list / Call Notes -->
+    <!-- Contact picker (visible in call notes mode) -->
+    <div class="init-picker" id="contactPicker">
+      <label>→ Contact:</label>
+      <select class="init-sel" id="contactSel" onchange="cnSelectContact(this.value)">
+        <option value="">Select contact…</option>
+      </select>
+    </div>
+
+    <!-- Navigate to Delegated list -->
     <a class="del-nav" href="delegate.html" target="_blank" title="Open Delegated list (Shift+D to delegate hovered card)">🤝 Delegated</a>
-    <a class="del-nav" href="call-notes.html" target="_blank" style="border-color:#6ee7b7;color:#065f46;background:#ecfdf5">📞 Call Notes</a>
   </div>
 
   <!-- Projects + Tasks columns -->
-  <div class="right-columns">
+  <div id="right-columns-wrap" class="right-columns">
 
     <!-- Projects column -->
     <div class="col-main" id="colProjects"
@@ -554,6 +598,20 @@
     </div>
 
   </div><!-- /.right-columns -->
+
+  <!-- ═══ INLINE CALL NOTES PANEL (shown when mode = callnotes) ═══ -->
+  <div id="callNotesPanel" style="display:none;flex:1;overflow:hidden;display:none;flex-direction:row;gap:0">
+
+    <!-- Contact list sidebar -->
+    <div id="cnContactList" style="width:200px;flex-shrink:0;overflow-y:auto;background:#064e3b;padding:12px 0;display:flex;flex-direction:column;gap:2px"></div>
+
+    <!-- Topics + notes area -->
+    <div id="cnContent" style="flex:1;overflow-y:auto;padding:20px 24px;background:#f0f2f5">
+      <div style="color:#6b7280;font-size:13px;padding-top:40px;text-align:center">Select a contact to see topics</div>
+    </div>
+
+  </div><!-- /.callNotesPanel -->
+
 </div><!-- /.right-side -->
 
 <div class="toast-wrap" id="toasts"></div>
@@ -716,6 +774,15 @@ function addItem() {
   const input = document.getElementById('qInput');
   const title = input.value.trim();
   if (!title) { input.focus(); toast('⚠️ Type something first'); return; }
+  // ── Call Notes mode: add a topic ──
+  if (addType === 'callnotes') {
+    const cid = document.getElementById('contactSel').value;
+    if (!cid) { toast('⚠️ Select a contact first'); return; }
+    cnAddTopic(cid, title);
+    input.value = '';
+    input.focus();
+    return;
+  }
   const priority      = document.getElementById('qPri').value;
   const initiativeKey = addType === 'project' ? (document.getElementById('initLinkSel').value || null) : null;
   const projectId     = addType === 'task'    ? (document.getElementById('projLinkSel').value || null) : null;
@@ -932,13 +999,23 @@ function populateProjPicker() {
 
 function setAddType(t) {
   addType = t;
-  document.getElementById('btnTask').className = 'type-btn' + (t==='task'  ? ' t-task' : '');
-  document.getElementById('btnProj').className = 'type-btn' + (t==='project'? ' t-proj' : '');
-  document.getElementById('initPicker').className = 'init-picker' + (t==='project' ? ' visible' : '');
-  document.getElementById('projPicker').className = 'proj-picker' + (t==='task'    ? ' visible' : '');
-  document.getElementById('qInput').placeholder = t==='project'
-    ? 'Add a strategy or project… (press N)'
-    : 'Add task… (press N)';
+  document.getElementById('btnTask').className = 'type-btn' + (t==='task'     ? ' t-task' : '');
+  document.getElementById('btnProj').className = 'type-btn' + (t==='project'  ? ' t-proj' : '');
+  document.getElementById('btnCall').className = 'type-btn' + (t==='callnotes'? ' t-call' : '');
+  document.getElementById('initPicker').className    = 'init-picker' + (t==='project'   ? ' visible' : '');
+  document.getElementById('projPicker').className    = 'proj-picker' + (t==='task'      ? ' visible' : '');
+  document.getElementById('contactPicker').className = 'init-picker' + (t==='callnotes' ? ' visible' : '');
+  // Toggle main panels
+  document.getElementById('right-columns-wrap').style.display = t==='callnotes' ? 'none' : '';
+  const cnPanel = document.getElementById('callNotesPanel');
+  cnPanel.style.display = t==='callnotes' ? 'flex' : 'none';
+  // Priority selector visibility
+  document.getElementById('qPri').style.display = t==='callnotes' ? 'none' : '';
+  document.getElementById('qInput').placeholder =
+    t==='project'   ? 'Add a strategy or project… (press N)' :
+    t==='callnotes' ? 'Add a topic to discuss… (press N)' :
+                      'Add task… (press N)';
+  if (t==='callnotes') { cnLoadData(); cnPopulateContactSel(); }
 }
 
 // ─────────────────────────────────────────────
@@ -1041,23 +1118,25 @@ function taskCardHtml(item) {
      ondragstart="dragStart(event,'${item.id}')"
      ondragend="dragEnd(event)"
      onmouseenter="lastHoveredId='${item.id}'">
-  <span class="drag-handle" title="Drag to Projects column to convert to project">⠿</span>
-  <div class="check ${item.completed?'chk':''}" onclick="toggle('${item.id}')">
-    ${item.completed?'<svg width="9" height="9" viewBox="0 0 9 9"><polyline points="1,4.5 3.5,7 8,1.5" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>':''}
-  </div>
-  <div class="task-body">
-    <div class="task-title">${esc(item.title)}</div>
-    ${linkedProj ? `<div class="task-proj-tag" title="Linked project">📋 ${esc(linkedProj.title.slice(0,40))}${linkedProj.title.length>40?'…':''}</div>` : ''}
-    <div class="task-meta">
-      <span class="badge ${P_BADGE[item.priority]||'bp-normal'}">${P_LABEL[item.priority]||item.priority}</span>
-      <span class="badge ${S_BADGE[item.source]||'bs-manual'}">${S_ICON[item.source]||'📌'} ${S_LABEL[item.source]||item.source}</span>
-      ${deadlineBadge(item.dueDate)}
-      <span class="meta-date">${age(item.addedAt)}</span>
+  <div class="task-top-row">
+    <span class="drag-handle" title="Drag to Projects column to convert to project">⠿</span>
+    <div class="check ${item.completed?'chk':''}" onclick="toggle('${item.id}')">
+      ${item.completed?'<svg width="9" height="9" viewBox="0 0 9 9"><polyline points="1,4.5 3.5,7 8,1.5" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>':''}
     </div>
-    ${noteOpen
-      ? `<textarea class="task-notes-area" placeholder="Notes…" onchange="saveNote('${item.id}',this.value)">${esc(item.notes||'')}</textarea>`
-      : (item.notes ? `<div class="task-notes-snip" onclick="toggleNote('${item.id}')">📝 ${esc(item.notes.slice(0,90))}${item.notes.length>90?'…':''}</div>` : '')}
+    <div class="task-body">
+      <div class="task-title">${esc(item.title)}</div>
+      ${linkedProj ? `<div class="task-proj-tag" title="Linked project">📋 ${esc(linkedProj.title.slice(0,40))}${linkedProj.title.length>40?'…':''}</div>` : ''}
+    </div>
   </div>
+  <div class="task-meta">
+    <span class="badge ${P_BADGE[item.priority]||'bp-normal'}">${P_LABEL[item.priority]||item.priority}</span>
+    <span class="badge ${S_BADGE[item.source]||'bs-manual'}">${S_ICON[item.source]||'📌'} ${S_LABEL[item.source]||item.source}</span>
+    ${deadlineBadge(item.dueDate)}
+    <span class="meta-date">${age(item.addedAt)}</span>
+  </div>
+  ${noteOpen
+    ? `<textarea class="task-notes-area" placeholder="Notes…" onchange="saveNote('${item.id}',this.value)">${esc(item.notes||'')}</textarea>`
+    : (item.notes ? `<div class="task-notes-snip" onclick="toggleNote('${item.id}')">📝 ${esc(item.notes.slice(0,90))}${item.notes.length>90?'…':''}</div>` : '')}
   <div class="task-actions">
     <select class="pri-ch" style="max-width:130px;font-size:10px" title="Link to project" onchange="setProjectOnTask('${item.id}',this.value)">${projOpts}</select>
     <select class="pri-ch" style="max-width:130px;font-size:10px" title="Link to initiative" onchange="setInitOnTask('${item.id}',this.value)">${initOpts}</select>
@@ -1327,6 +1406,196 @@ if ('serviceWorker' in navigator) {
       })
       .catch(e => console.warn('SW registration failed:', e));
   });
+}
+
+// ─────────────────────────────────────────────
+//  INLINE CALL NOTES
+// ─────────────────────────────────────────────
+const CN_STORE = 'bob_callnotes_v1';
+const CN_DEFAULT_CONTACTS = [
+  { id:'nate',    name:'Nate Price',    email:'nate.price@subcontractorhub.com',    role:'SubcontractorHub', initials:'NP' },
+  { id:'jessica', name:'Jessica Brach', email:'jessica.brach@subcontractorhub.com', role:'SubcontractorHub', initials:'JB' },
+  { id:'saurabh', name:'Saurabh Garg',  email:'sgarg@ops-partnersllc.com',          role:'Ops Partners',     initials:'SG' },
+  { id:'justin',  name:'Justin Brach',  email:'justin@subcontractorhub.com',         role:'SubcontractorHub', initials:'JB' },
+  { id:'scott',   name:'Scott LeDuc',   email:'sleduc@seamlessenergy.com',           role:'Seamless Energy',  initials:'SL' },
+  { id:'renee',   name:'Renee Surratt', email:'rsurratt@subcontractorhub.com',       role:'SubcontractorHub', initials:'RS' }
+];
+let cnContacts = [];
+let cnNotes    = {};
+let cnActive   = null;
+
+function cnLoadData() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(CN_STORE) || '{}');
+    cnContacts = raw.contacts || CN_DEFAULT_CONTACTS;
+    cnNotes    = raw.notes    || {};
+    cnContacts.forEach(c => { if (!cnNotes[c.id]) cnNotes[c.id] = { topics:[], log:'' }; });
+  } catch { cnContacts = CN_DEFAULT_CONTACTS; cnNotes = {}; }
+  cnRenderContactList();
+  if (cnActive) cnRenderContent(cnActive);
+  else if (cnContacts.length) cnSelectContact(cnContacts[0].id);
+}
+
+function cnSaveData() {
+  localStorage.setItem(CN_STORE, JSON.stringify({ contacts: cnContacts, notes: cnNotes }));
+  cnRenderContactList();
+  if (cnActive) cnRenderContent(cnActive);
+}
+
+function cnPopulateContactSel() {
+  const sel = document.getElementById('contactSel');
+  sel.innerHTML = '<option value="">Select contact…</option>' +
+    cnContacts.map(c => `<option value="${esc(c.id)}" ${c.id===cnActive?'selected':''}>${esc(c.name)}</option>`).join('') +
+    '<option value="__open__">Other / Open notes</option>';
+}
+
+function cnSelectContact(id) {
+  cnActive = id;
+  document.getElementById('contactSel').value = id;
+  cnRenderContactList();
+  cnRenderContent(id);
+}
+
+function cnRenderContactList() {
+  const el = document.getElementById('cnContactList');
+  if (!el) return;
+  let html = `<div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:#6ee7b7;text-transform:uppercase;padding:0 14px 8px">Contacts</div>`;
+  cnContacts.forEach(c => {
+    const cnt = (cnNotes[c.id]?.topics||[]).filter(t=>!t.done).length;
+    html += `<button class="cn-contact-btn ${cnActive===c.id?'active':''}" onclick="cnSelectContact('${c.id}')">
+      <div class="cn-avatar">${esc(c.initials)}</div>
+      <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.name)}</span>
+      ${cnt?`<span class="cn-cnt">${cnt}</span>`:''}
+    </button>`;
+  });
+  html += `<div style="height:1px;background:rgba(255,255,255,.1);margin:10px 14px"></div>
+    <button class="cn-contact-btn ${cnActive==='__open__'?'active':''}" onclick="cnSelectContact('__open__')">
+      <div class="cn-avatar">✏️</div>
+      <span style="flex:1">Open Notes</span>
+    </button>`;
+  el.innerHTML = html;
+}
+
+function cnRenderContent(id) {
+  const el = document.getElementById('cnContent');
+  if (!el) return;
+  if (id === '__open__') { cnRenderOpen(el); return; }
+  const c = cnContacts.find(x=>x.id===id);
+  if (!c) return;
+  const n = cnNotes[c.id] || { topics:[], log:'' };
+  const topicsHtml = n.topics.map(t=>`
+    <div class="cn-topic-item ${t.done?'done':''}">
+      <div class="cn-check ${t.done?'checked':''}" onclick="cnToggleTopic('${c.id}','${t.id}')">${t.done?'✓':''}</div>
+      <div class="cn-topic-text" contenteditable="true"
+        onblur="cnUpdateTopicText('${c.id}','${t.id}',this.innerText)">${esc(t.text)}</div>
+      <button class="cn-remove" onclick="cnRemoveTopic('${c.id}','${t.id}')">✕</button>
+    </div>`).join('') || '<div style="font-size:12px;color:#9ca3af;padding:6px 0">No topics yet — type one above and press + Add</div>';
+  el.innerHTML = `
+    <div style="max-width:680px">
+      <div class="cn-person-hdr">
+        <div class="cn-big-avatar">${esc(c.initials)}</div>
+        <div>
+          <div style="font-size:18px;font-weight:700">${esc(c.name)}</div>
+          <div style="font-size:12px;color:#6b7280">${esc(c.email)}</div>
+        </div>
+        ${c.email?`<a href="mailto:${esc(c.email)}?subject=Quick note" style="margin-left:auto;padding:6px 14px;background:#059669;color:#fff;border-radius:7px;font-size:12px;font-weight:600;text-decoration:none">✉️ Email</a>`:''}
+      </div>
+      <div class="cn-section-lbl">📌 Topics to discuss</div>
+      ${topicsHtml}
+      <div class="cn-section-lbl">📋 Call log</div>
+      <textarea class="cn-log" id="cnLog-${c.id}" placeholder="Notes, action items, follow-ups from your last call…">${esc(n.log||'')}</textarea>
+      <button class="cn-save-btn" onclick="cnSaveLog('${c.id}')">Save notes</button>
+    </div>`;
+}
+
+function cnRenderOpen(el) {
+  if (!cnNotes['__open__']) cnNotes['__open__'] = { contacts:[] };
+  const ocs = cnNotes['__open__'].contacts || [];
+  let html = `<div style="max-width:680px">
+    <div style="font-size:18px;font-weight:700;margin-bottom:4px">Open Notes</div>
+    <div style="font-size:12px;color:#6b7280;margin-bottom:18px">Add any other person and topics</div>`;
+  ocs.forEach((oc,idx)=>{
+    const tHtml = (oc.topics||[]).map(t=>`
+      <div class="cn-topic-item ${t.done?'done':''}">
+        <div class="cn-check ${t.done?'checked':''}" onclick="cnToggleOpenTopic(${idx},'${t.id}')">${t.done?'✓':''}</div>
+        <div class="cn-topic-text" contenteditable="true"
+          onblur="cnUpdateOpenTopic(${idx},'${t.id}',this.innerText)">${esc(t.text)}</div>
+        <button class="cn-remove" onclick="cnRemoveOpenTopic(${idx},'${t.id}')">✕</button>
+      </div>`).join('');
+    html += `<div style="margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #e1e5eb">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <strong style="font-size:14px">${esc(oc.name)}</strong>
+        ${oc.email?`<span style="font-size:11px;color:#6b7280">${esc(oc.email)}</span>`:''}
+        <button onclick="cnRemoveOpenContact(${idx})" style="margin-left:auto;border:1px solid #fee2e2;color:#ef4444;background:none;border-radius:5px;padding:2px 8px;cursor:pointer;font-size:11px">Remove</button>
+      </div>
+      ${tHtml}
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <input id="openTopic-${idx}" style="flex:1;padding:6px 9px;border:1.5px solid #e1e5eb;border-radius:6px;font-size:12px"
+          placeholder="Add topic…" onkeydown="if(event.key==='Enter')cnAddOpenTopic(${idx})" />
+        <button onclick="cnAddOpenTopic(${idx})" style="padding:6px 12px;background:#059669;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px">+</button>
+      </div>
+    </div>`;
+  });
+  html += `<div style="display:flex;gap:8px;margin-top:10px">
+    <input id="newOpenName"  style="flex:1;padding:8px 10px;border:1.5px solid #e1e5eb;border-radius:7px;font-size:12px" placeholder="Name" />
+    <input id="newOpenEmail" style="flex:1;padding:8px 10px;border:1.5px solid #e1e5eb;border-radius:7px;font-size:12px" placeholder="Email (optional)" type="email" />
+    <button onclick="cnAddOpenContact()" style="padding:8px 14px;background:#059669;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600">+ Add</button>
+  </div></div>`;
+  el.innerHTML = html;
+}
+
+function cnAddTopic(cid, text) {
+  if (!cnNotes[cid]) cnNotes[cid] = { topics:[], log:'' };
+  cnNotes[cid].topics.push({ id: Date.now().toString(36)+Math.random().toString(36).slice(2,5), text, done:false });
+  cnSaveData();
+  toast('📌 Topic added');
+}
+function cnToggleTopic(cid, tid) {
+  const t = cnNotes[cid]?.topics.find(x=>x.id===tid);
+  if (t) { t.done=!t.done; cnSaveData(); }
+}
+function cnUpdateTopicText(cid, tid, text) {
+  const t = cnNotes[cid]?.topics.find(x=>x.id===tid);
+  if (t && text.trim()) { t.text=text.trim(); localStorage.setItem(CN_STORE, JSON.stringify({contacts:cnContacts,notes:cnNotes})); }
+}
+function cnRemoveTopic(cid, tid) {
+  if (cnNotes[cid]) { cnNotes[cid].topics=cnNotes[cid].topics.filter(x=>x.id!==tid); cnSaveData(); }
+}
+function cnSaveLog(cid) {
+  const area = document.getElementById(`cnLog-${cid}`);
+  if (!cnNotes[cid]) cnNotes[cid]={topics:[],log:''};
+  cnNotes[cid].log = area.value;
+  cnSaveData();
+  toast('Notes saved');
+}
+function cnAddOpenContact() {
+  const name = document.getElementById('newOpenName').value.trim();
+  if (!name) return;
+  const email = document.getElementById('newOpenEmail').value.trim();
+  if (!cnNotes['__open__']) cnNotes['__open__']={contacts:[]};
+  cnNotes['__open__'].contacts.push({id:Date.now().toString(36),name,email,topics:[]});
+  cnSaveData();
+}
+function cnRemoveOpenContact(idx) {
+  cnNotes['__open__'].contacts.splice(idx,1); cnSaveData();
+}
+function cnAddOpenTopic(idx) {
+  const inp = document.getElementById(`openTopic-${idx}`);
+  const text = inp?.value.trim(); if(!text) return;
+  cnNotes['__open__'].contacts[idx].topics.push({id:Date.now().toString(36),text,done:false});
+  inp.value=''; cnSaveData();
+}
+function cnToggleOpenTopic(idx,tid) {
+  const t=cnNotes['__open__']?.contacts[idx]?.topics.find(x=>x.id===tid);
+  if(t){t.done=!t.done;cnSaveData();}
+}
+function cnUpdateOpenTopic(idx,tid,text) {
+  const t=cnNotes['__open__']?.contacts[idx]?.topics.find(x=>x.id===tid);
+  if(t&&text.trim()){t.text=text.trim();localStorage.setItem(CN_STORE,JSON.stringify({contacts:cnContacts,notes:cnNotes}));}
+}
+function cnRemoveOpenTopic(idx,tid) {
+  const oc=cnNotes['__open__']?.contacts[idx];
+  if(oc){oc.topics=oc.topics.filter(x=>x.id!==tid);cnSaveData();}
 }
 
 // ─────────────────────────────────────────────

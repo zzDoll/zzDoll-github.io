@@ -91,6 +91,43 @@ window.PH_TASKS = [
   },
 
   // ══════════════════════════════════════════════
+  //  GMAIL — Actionable items from inbox (Mar 25)
+  // ══════════════════════════════════════════════
+  {
+    id: "gmail_gp_docusign_20260325",
+    title: "Open DocuSign — SunpaymentHub / G-P new account (overdue)",
+    priority: "urgent",
+    source: "gmail",
+    type: "task",
+    completed: false,
+    addedAt: 1774374133000,
+    notes: "Matt Desrosiers @ G-P following up — DocuSign not yet opened. Nate Price CC'd Steve. Needs to be signed ASAP.",
+    dueDate: "2026-03-25"
+  },
+  {
+    id: "gmail_go_premier_cancel_20260325",
+    title: "Review Go Premier Solar cancellation request",
+    priority: "high",
+    source: "gmail",
+    type: "task",
+    completed: false,
+    addedAt: 1774374142000,
+    notes: "Go Premier Solar submitted billing cancellation via SubcontractorHub. Reason: requesting cancellation. Review with AR team.",
+    dueDate: null
+  },
+  {
+    id: "gmail_ecl_fundraising_20260325",
+    title: "Respond to ECL Reconnect — revenue-based financing follow up",
+    priority: "normal",
+    source: "gmail",
+    type: "task",
+    completed: false,
+    addedAt: 1774369649000,
+    notes: "Ramsey Benzina @ ECL/eCap Labs — non-dilutive revenue-based financing for B2B SaaS. Connected through 5th Line. Following up on fundraising goals.",
+    dueDate: null
+  },
+
+  // ══════════════════════════════════════════════
   //  JIRA FINANCE BOARD — FN project (tasks)
   //  Finance & accounting action items for Steve
   // ══════════════════════════════════════════════

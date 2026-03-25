@@ -1135,8 +1135,10 @@ function save(render=true) {
   updateTabTitle();
   if (BOB_DB) {
     pendingLocalSave = true;
+    // JSON round-trip strips undefined values, which Firestore rejects
+    const cleanItems = JSON.parse(JSON.stringify(items));
     BOB_DB.collection('bob').doc(FB_DOC).set(
-      { items, lastUpdated: firebase.firestore.FieldValue.serverTimestamp(), lastDevice: navigator.platform },
+      { items: cleanItems, lastUpdated: firebase.firestore.FieldValue.serverTimestamp(), lastDevice: navigator.platform },
       { merge: false }
     ).then(() => setSyncPillLive(true))
      .catch(e => { pendingLocalSave = false; console.warn('Firestore save error:', e); setSyncPillLive(false); });

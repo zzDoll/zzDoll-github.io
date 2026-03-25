@@ -1107,14 +1107,7 @@ function initFirebase() {
   try {
     const app = firebase.initializeApp(cfg);
     BOB_DB = firebase.firestore(app);
-    // Use new cache API (enablePersistence is deprecated in Firebase 9+)
-    try {
-      firebase.firestore.setLogLevel('error');
-    } catch(e) {}
-    BOB_DB.settings({ cacheSizeBytes: firebase.firestore.CACHE_SIZE_UNLIMITED });
-    BOB_DB.enableMultiTabIndexedDbPersistence().catch(() => {
-      BOB_DB.enableIndexedDbPersistence().catch(() => {});
-    });
+    BOB_DB.enablePersistence({ synchronizeTabs: true }).catch(() => {});
 
     // Real-time listener — updates all open tabs/devices instantly
     BOB_DB.collection('bob').doc(FB_DOC).onSnapshot(doc => {

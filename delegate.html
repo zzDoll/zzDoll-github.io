@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Delegated — Bob</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#6366f1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Bob" />
+  <link rel="apple-touch-icon" href="bob-logo.png" />
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #f0f2f5;
+      --card:    #ffffff;
+      --border:  #e1e5eb;
+      --text:    #1a1d23;
+      --muted:   #6b7280;
+      --accent:  #6366f1;
+      --urgent:  #ef4444;
+      --high:    #f97316;
+      --normal:  #3b82f6;
+      --low:     #9ca3af;
+      --done:    #22c55e;
+      --del-bg:  #1e1b4b;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      position: sticky; top: 0; z-index: 200;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 12px;
+      padding: 0 20px; height: 56px;
+      box-shadow: 0 1px 6px rgba(0,0,0,.07);
+    }
+    .header-logo {
+      display: flex; align-items: center; justify-content: center;
+    }
+    .header-logo img {
+      height: 40px; width: auto; object-fit: contain;
+      filter: drop-shadow(0 1px 3px rgba(0,0,0,.12));
+    }
+    .header-title {
+      font-size: 16px; font-weight: 800; color: var(--accent); letter-spacing: -.3px;
+    }
+    .header-sub {
+      font-size: 11px; color: var(--muted);
+    }
+    .header-divider { width: 1px; height: 28px; background: var(--border); flex-shrink: 0; }
+    .header-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+
+    /* ── BACK LINK ── */
+    .back-btn {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 12px; font-weight: 600; color: var(--accent);
+      padding: 5px 11px; border: 1.5px solid var(--accent);
+      border-radius: 8px; cursor: pointer; text-decoration: none;
+      transition: all .15s;
+    }
+    .back-btn:hover { background: #eef2ff; }
+
+    /* ── ADD STRIP ── */
+    .add-strip {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 20px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .add-strip input, .add-strip select {
+      padding: 7px 11px; border: 1.5px solid var(--border);
+      border-radius: 8px; font-size: 13px; outline: none;
+      font-family: inherit; background: var(--bg);
+      transition: border-color .15s;
+    }
+    .add-strip input:focus { border-color: var(--accent); background: white; }
+    .add-strip input.task-input { flex: 1; min-width: 200px; }
+    .add-strip input.owner-input { width: 150px; }
+    .btn {
+      padding: 7px 16px; border-radius: 8px; border: none;
+      cursor: pointer; font-size: 13px; font-weight: 600; transition: all .15s;
+    }
+    .btn-add { background: var(--accent); color: white; }
+    .btn-add:hover { background: #4f46e5; }
+
+    /* ── MAIN LAYOUT ── */
+    .main { display: flex; gap: 0; flex: 1; min-height: 0; }
+
+    /* ── OWNER SIDEBAR ── */
+    .sidebar {
+      width: 200px; flex-shrink: 0;
+      background: var(--del-bg);
+      padding: 16px 12px;
+      overflow-y: auto;
+    }
+    .sidebar-title {
+      font-size: 10px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 1px; color: #a5b4fc; margin-bottom: 12px;
+    }
+    .owner-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 7px 10px; border-radius: 8px; cursor: pointer;
+      border: 1px solid transparent; transition: background .12s;
+      color: #e0e7ff; font-size: 13px; font-weight: 500;
+    }
+    .owner-item:hover { background: #312e81; }
+    .owner-item.selected { background: #4338ca; border-color: #818cf8; }
+    .owner-count {
+      font-size: 10px; background: rgba(255,255,255,.12);
+      padding: 1px 6px; border-radius: 5px; color: #a5b4fc;
+    }
+    .owner-all { color: #a5b4fc; font-size: 12px; margin-bottom: 6px; }
+    .sidebar-sep { height: 1px; background: #312e81; margin: 10px 0; }
+
+    /* ── TASK LIST ── */
+    .task-list {
+      flex: 1; padding: 20px; overflow-y: auto;
+    }
+    .list-hdr {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 16px; padding-bottom: 10px;
+      border-bottom: 2.5px solid #f97316;
+    }
+    .list-title { font-size: 15px; font-weight: 800; letter-spacing: -.2px; }
+    .list-badge {
+      font-size: 10.5px; font-weight: 700; padding: 2px 9px;
+      border-radius: 10px; color: white; background: #f97316;
+    }
+    .list-stats { display: flex; gap: 5px; margin-left: auto; }
+    .mini-stat {
+      font-size: 10.5px; color: var(--muted);
+      background: var(--bg); padding: 2px 7px;
+      border-radius: 5px; border: 1px solid var(--border);
+    }
+
+    /* ── DELEGATE CARDS ── */
+    .del-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-left: 3px solid #f97316;
+      border-radius: 9px; padding: 12px 14px;
+      margin-bottom: 7px;
+      transition: box-shadow .15s, opacity .2s;
+    }
+    .del-card:hover { box-shadow: 0 3px 12px rgba(249,115,22,.1); }
+    .del-card.done { opacity: .38; }
+    .del-card.done .del-title { text-decoration: line-through; color: var(--muted); }
+    .del-card.urg { border-left-color: var(--urgent); }
+    .del-card.hi  { border-left-color: var(--high); }
+
+    .del-owner-tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 10px; font-weight: 700; color: #f97316;
+      background: #fff7ed; border: 1px solid #fed7aa;
+      border-radius: 4px; padding: 1px 7px; margin-bottom: 6px;
+    }
+    /* Bob (AI) special styling */
+    .del-card.ai-card { border-left-color: #6366f1; }
+    .del-card.ai-card .del-owner-tag { color: #6366f1; background: #eef2ff; border-color: #c7d2fe; }
+    .ai-run-btn {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 11.5px; font-weight: 700; color: white;
+      background: #6366f1; border: none; border-radius: 6px;
+      padding: 4px 12px; cursor: pointer; transition: background .15s;
+    }
+    .ai-run-btn:hover { background: #4f46e5; }
+    .ai-instructions {
+      font-size: 11.5px; color: #4f46e5; background: #eef2ff;
+      border: 1px solid #c7d2fe; border-radius: 6px;
+      padding: 6px 10px; margin-bottom: 8px; line-height: 1.5;
+    }
+    /* Bob (AI) sidebar pin */
+    .owner-ai {
+      background: #312e81; border: 1px solid #818cf8;
+      color: #c7d2fe; font-weight: 700;
+    }
+    .owner-ai:hover { background: #4338ca; }
+    .owner-ai.selected { background: #4338ca; border-color: #a5b4fc; }
+    .del-title { font-size: 13.5px; font-weight: 600; line-height: 1.4; margin-bottom: 6px; word-break: break-word; }
+    .del-notes { font-size: 11.5px; color: #6b7280; line-height: 1.55; margin-bottom: 8px; word-break: break-word; }
+    .del-meta { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
+
+    .badge { font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; }
+    .bp-urgent { background:#fef2f2; color:var(--urgent); }
+    .bp-high   { background:#fff7ed; color:var(--high); }
+    .bp-normal { background:#eff6ff; color:var(--normal); }
+    .bp-low    { background:#f9fafb; color:var(--low); border:1px solid #e5e7eb; }
+    .meta-date { font-size: 10px; color: var(--muted); }
+
+    .del-actions {
+      display: flex; gap: 5px; align-items: center;
+      padding-top: 8px; border-top: 1px solid #f3f4f6;
+    }
+    .act-btn {
+      padding: 3px 8px; border-radius: 5px; border: 1px solid var(--border);
+      background: white; cursor: pointer; font-size: 11px; color: var(--muted);
+      transition: all .1s; white-space: nowrap;
+    }
+    .act-btn:hover { border-color: #aaa; color: var(--text); }
+    .act-btn.del:hover { border-color: var(--urgent); color: var(--urgent); }
+    .act-btn.send-back { border-color: #c7d2fe; color: var(--accent); }
+    .act-btn.send-back:hover { background: #eef2ff; }
+
+    select.pri-ch {
+      font-size: 10.5px; padding: 2px 4px; border: 1px solid var(--border);
+      border-radius: 5px; background: white; cursor: pointer; outline: none; color: var(--text);
+    }
+
+    .notes-area {
+      width: 100%; margin-top: 6px; padding: 6px 9px; border: 1px solid var(--border);
+      border-radius: 6px; font-size: 11.5px; color: var(--muted); resize: vertical;
+      min-height: 46px; font-family: inherit; line-height: 1.5; display: block;
+    }
+    .notes-area:focus { outline: none; border-color: var(--accent); }
+
+    /* ── SEND-BACK BADGE on bob cards ── */
+    .empty { text-align: center; padding: 40px 20px; color: var(--muted); }
+    .empty-icon { font-size: 28px; margin-bottom: 8px; }
+
+    /* ── SECTION HEADERS ── */
+    .sec-hdr { display: flex; align-items: center; gap: 6px; margin: 14px 0 6px; }
+    .sec-hdr:first-child { margin-top: 0; }
+    .sec-title { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; }
+    .sec-cnt { font-size: 9.5px; background: var(--border); padding: 1px 6px; border-radius: 5px; color: var(--muted); }
+
+    /* ── TOAST ── */
+    .toast-wrap { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 7px; z-index: 999; }
+    .toast { background: #1a1d23; color: white; padding: 9px 14px; border-radius: 9px; font-size: 12.5px; box-shadow: 0 4px 14px rgba(0,0,0,.2); animation: slideIn .2s ease; pointer-events: none; }
+    .toast.good { background: #166534; }
+    @keyframes slideIn { from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)} }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+    .sidebar::-webkit-scrollbar-thumb { background: #4338ca; }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-logo">
+    <img src="bob-logo.png" alt="Bob" title="Bob's your uncle!" />
+  </div>
+  <div class="header-divider"></div>
+  <div>
+    <div class="header-title">Delegated</div>
+    <div class="header-sub">Things on other people's plates — that you're tracking</div>
+  </div>
+  <div class="header-right">
+    <a class="back-btn" href="bob.html" title="Back to Bob">← Bob</a>
+  </div>
+</div>
+
+<!-- ADD STRIP -->
+<div class="add-strip">
+  <input class="task-input" id="dInput" type="text" placeholder="What did you delegate? (press N)" autocomplete="off" />
+  <input class="owner-input" id="dOwner" type="text" placeholder="Owner (name)" autocomplete="off" />
+  <select id="dPri">
+    <option value="urgent">🔴 Urgent</option>
+    <option value="high">🟠 High</option>
+    <option value="normal" selected>🔵 Normal</option>
+    <option value="low">⚪ Low</option>
+  </select>
+  <input type="date" id="dDue" style="padding:7px 11px;border:1.5px solid #e1e5eb;border-radius:8px;font-size:13px;background:#f0f2f5;" />
+  <button class="btn btn-add" onclick="addDelegate()">+ Delegate</button>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <!-- Owner sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-title">People</div>
+    <div class="owner-item owner-all selected" id="ownerAll" onclick="filterOwner(null)">
+      Everyone <span class="owner-count" id="ownerAllCnt">0</span>
+    </div>
+    <div class="sidebar-sep"></div>
+    <div id="ownerList"></div>
+  </div>
+
+  <!-- Task list -->
+  <div class="task-list">
+    <div class="list-hdr">
+      <div class="list-title" id="listTitle">All Delegated</div>
+      <span class="list-badge" id="listBadge">0</span>
+      <div class="list-stats" id="listStats"></div>
+    </div>
+    <div id="taskGroups"></div>
+    <div class="empty" id="emptyState" style="display:none">
+      <div class="empty-icon">🤝</div>
+      <div style="font-size:13px;color:#6b7280">Nothing delegated yet</div>
+      <div style="font-size:11px;color:#9ca3af;margin-top:6px">Add something above, or send items here from Bob</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<script>
+const STORE_KEY = 'bob_delegate_v1';
+const P_LABEL = {urgent:'Urgent', high:'High', normal:'Normal', low:'Low'};
+const P_COLOR = {urgent:'#ef4444', high:'#f97316', normal:'#3b82f6', low:'#9ca3af'};
+const P_BADGE = {urgent:'bp-urgent', high:'bp-high', normal:'bp-normal', low:'bp-low'};
+
+let items = [];
+let filterOwnerName = null;
+let openNotes = {};
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function uid() { return 'del_' + Date.now() + '_' + Math.random().toString(36).slice(2,5); }
+function age(ts) {
+  const d = Date.now()-ts;
+  if (d<60000) return 'just now';
+  if (d<3600000) return Math.floor(d/60000)+'m ago';
+  if (d<86400000) return Math.floor(d/3600000)+'h ago';
+  return Math.floor(d/86400000)+'d ago';
+}
+
+function load() {
+  try { items = JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch { items = []; }
+}
+function save(render=true) {
+  localStorage.setItem(STORE_KEY, JSON.stringify(items));
+  if (render) renderAll();
+}
+
+function addDelegate() {
+  const input = document.getElementById('dInput');
+  const title = input.value.trim();
+  if (!title) { input.focus(); toast('⚠️ Add a description first'); return; }
+  const owner    = document.getElementById('dOwner').value.trim() || 'Unassigned';
+  const priority = document.getElementById('dPri').value;
+  const dueDate  = document.getElementById('dDue').value || null;
+  items.unshift({ id: uid(), title, owner, priority, dueDate, completed: false, addedAt: Date.now(), notes: '' });
+  input.value = '';
+  save();
+  toast('🤝 Delegated to ' + owner);
+  input.focus();
+}
+
+function toggleDone(id) {
+  const item = items.find(i=>i.id===id);
+  if (!item) return;
+  item.completed = !item.completed;
+  item.completedAt = item.completed ? Date.now() : null;
+  save();
+}
+
+function removeItem(id) {
+  if (!confirm('Remove this delegated item?')) return;
+  items = items.filter(i=>i.id!==id);
+  delete openNotes[id];
+  save();
+}
+
+function changePri(id, v) {
+  const item = items.find(i=>i.id===id);
+  if (item) { item.priority = v; save(); }
+}
+
+function saveNote(id, v) {
+  const item = items.find(i=>i.id===id);
+  if (item) { item.notes = v; save(false); }
+}
+
+function toggleNote(id) { openNotes[id] = !openNotes[id]; renderAll(); }
+
+function changeOwner(id, v) {
+  const item = items.find(i=>i.id===id);
+  if (item) { item.owner = v || 'Unassigned'; save(); }
+}
+
+function sendBackToBob(id) {
+  const item = items.find(i=>i.id===id);
+  if (!item) return;
+  // Write to bob's localStorage store
+  try {
+    let bobItems = JSON.parse(localStorage.getItem('bob_v3')) || [];
+    if (!bobItems.find(b=>b.id===item.id)) {
+      bobItems.unshift({ ...item, type: 'task', source: 'manual', notes: (item.notes ? item.notes + '\n' : '') + '[Returned from Delegated — was owned by ' + item.owner + ']' });
+      localStorage.setItem('bob_v3', JSON.stringify(bobItems));
+      toast('↩ Sent back to Bob as a task');
+    } else {
+      toast('Already in Bob');
+    }
+  } catch(e) { toast('⚠️ Could not reach Bob — open Bob first'); }
+}
+
+function filterOwner(name) {
+  filterOwnerName = name;
+  document.querySelectorAll('.owner-item').forEach(el => el.classList.remove('selected'));
+  if (name === null) {
+    document.getElementById('ownerAll').classList.add('selected');
+  } else {
+    const el = document.getElementById('owner-' + CSS.escape(name));
+    if (el) el.classList.add('selected');
+  }
+  renderList();
+}
+
+function renderSidebar() {
+  const ownerMap = {};
+  items.filter(i=>!i.completed).forEach(i => {
+    const o = i.owner || 'Unassigned';
+    ownerMap[o] = (ownerMap[o] || 0) + 1;
+  });
+  document.getElementById('ownerAllCnt').textContent = items.filter(i=>!i.completed).length;
+  const sorted = Object.entries(ownerMap).sort((a,b) => {
+    if (a[0] === '🤖 Bob (AI)') return -1; // always pin AI at top
+    if (b[0] === '🤖 Bob (AI)') return 1;
+    return b[1] - a[1];
+  });
+  document.getElementById('ownerList').innerHTML = sorted.map(([name, cnt]) => {
+    const isAI = name === '🤖 Bob (AI)';
+    return `
+    <div class="owner-item ${isAI ? 'owner-ai' : ''} ${filterOwnerName===name?'selected':''}" id="owner-${esc(name)}" onclick="filterOwner('${esc(name)}')">
+      <span>${esc(name)}</span>
+      <span class="owner-count">${cnt}</span>
+    </div>`;
+  }).join('');
+}
+
+function cardHtml(item) {
+  const bc = item.priority==='urgent'?'urg':item.priority==='high'?'hi':'';
+  const noteOpen = !!openNotes[item.id];
+  const isAI = item.aiHandled || item.owner === '🤖 Bob (AI)';
+  const ownerIcon = isAI ? '🤖' : '👤';
+  return `
+<div class="del-card ${item.completed?'done':''} ${bc} ${isAI?'ai-card':''}" id="card-${item.id}">
+  <div class="del-owner-tag">${ownerIcon} ${esc(item.owner||'Unassigned')}</div>
+  <div class="del-title">${esc(item.title)}</div>
+  ${isAI && item.aiInstructions ? `<div class="ai-instructions">📋 Instructions: ${esc(item.aiInstructions)}</div>` : ''}
+  ${noteOpen
+    ? `<textarea class="notes-area" placeholder="Follow-up notes…" onchange="saveNote('${item.id}',this.value)">${esc(item.notes||'')}</textarea>`
+    : (item.notes ? `<div class="del-notes" onclick="toggleNote('${item.id}')">📝 ${esc(item.notes.slice(0,100))}${item.notes.length>100?'…':''}</div>` : '')}
+  <div class="del-meta">
+    <span class="badge ${P_BADGE[item.priority]||'bp-normal'}">${P_LABEL[item.priority]||item.priority}</span>
+    ${item.dueDate ? `<span class="meta-date">📆 ${esc(item.dueDate)}</span>` : ''}
+    <span class="meta-date">${age(item.addedAt)}</span>
+    ${item.completedAt ? `<span class="meta-date" style="color:var(--done)">✓ ${age(item.completedAt)}</span>` : ''}
+  </div>
+  <div class="del-actions">
+    <input style="font-size:11px;padding:2px 6px;border:1px solid #e1e5eb;border-radius:5px;width:110px;" value="${esc(item.owner||'')}" placeholder="Owner" onchange="changeOwner('${item.id}',this.value)" />
+    <select class="pri-ch" onchange="changePri('${item.id}',this.value)">
+      <option value="urgent" ${item.priority==='urgent'?'selected':''}>🔴</option>
+      <option value="high"   ${item.priority==='high'  ?'selected':''}>🟠</option>
+      <option value="normal" ${item.priority==='normal'?'selected':''}>🔵</option>
+      <option value="low"    ${item.priority==='low'   ?'selected':''}>⚪</option>
+    </select>
+    <button class="act-btn" onclick="toggleNote('${item.id}')">📝</button>
+    ${isAI ? `<button class="ai-run-btn" onclick="runWithClaude('${item.id}')" title="Open a new Claude session to handle this task">🤖 Run with Claude</button>` : ''}
+    <button class="act-btn send-back" onclick="sendBackToBob('${item.id}')" title="Return to Bob as a task">↩ Bob</button>
+    <button class="act-btn" onclick="toggleDone('${item.id}')">${item.completed?'↩ Reopen':'✓ Done'}</button>
+    <button class="act-btn del" onclick="removeItem('${item.id}')">✕</button>
+  </div>
+</div>`;
+}
+
+function renderList() {
+  const active = items.filter(i => !i.completed && (filterOwnerName===null || i.owner===filterOwnerName));
+  const done   = items.filter(i =>  i.completed && (filterOwnerName===null || i.owner===filterOwnerName));
+
+  document.getElementById('listTitle').textContent = filterOwnerName ? filterOwnerName : 'All Delegated';
+  document.getElementById('listBadge').textContent = active.length;
+
+  const urgent = active.filter(i=>i.priority==='urgent').length;
+  const high   = active.filter(i=>i.priority==='high').length;
+  document.getElementById('listStats').innerHTML = [
+    urgent ? `<span class="mini-stat"><strong style="color:#ef4444">${urgent}</strong> urgent</span>` : '',
+    high   ? `<span class="mini-stat"><strong style="color:#f97316">${high}</strong> high</span>` : '',
+    done.length ? `<span class="mini-stat"><strong>${done.length}</strong> done</span>` : ''
+  ].join('');
+
+  const groups = document.getElementById('taskGroups');
+  const empty  = document.getElementById('emptyState');
+
+  if (!active.length && !done.length) {
+    groups.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  const buckets = {urgent:[],high:[],normal:[],low:[]};
+  active.forEach(i => (buckets[i.priority]||buckets.normal).push(i));
+
+  let html = '';
+  ['urgent','high','normal','low'].forEach(p => {
+    const g = buckets[p]; if (!g.length) return;
+    g.sort((a,b)=>a.addedAt-b.addedAt);
+    html += `<div class="sec-hdr"><span class="sec-title" style="color:${P_COLOR[p]}">${P_LABEL[p]}</span><span class="sec-cnt">${g.length}</span></div>`;
+    g.forEach(i => html += cardHtml(i));
+  });
+
+  if (done.length) {
+    html += `<div class="sec-hdr" style="margin-top:20px"><span class="sec-title" style="color:var(--done)">Completed / Closed</span><span class="sec-cnt">${done.length}</span></div>`;
+    done.slice(0,5).forEach(i => html += cardHtml(i));
+    if (done.length > 5) html += `<div style="font-size:11px;color:var(--muted);text-align:center;padding:6px 0">+${done.length-5} more</div>`;
+  }
+
+  groups.innerHTML = html;
+}
+
+function renderAll() {
+  renderSidebar();
+  renderList();
+}
+
+function toast(msg, type='') {
+  const wrap = document.getElementById('toasts');
+  const el   = document.createElement('div');
+  el.className = 'toast' + (type?' '+type:'');
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// Keyboard shortcut
+document.addEventListener('keydown', e => {
+  if (e.key === 'n' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+    e.preventDefault();
+    document.getElementById('dInput').focus();
+  }
+});
+document.getElementById('dInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addDelegate();
+  if (e.key === 'Escape') e.target.blur();
+});
+
+// ─────────────────────────────────────────────
+//  RUN WITH CLAUDE (AI items)
+// ─────────────────────────────────────────────
+function runWithClaude(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  const prompt = encodeURIComponent(
+    `I have a task queued for you in Bob (my Priority Hub):\n\n` +
+    `Title: ${item.title}\n` +
+    (item.aiInstructions ? `Instructions: ${item.aiInstructions}\n` : '') +
+    (item.notes ? `Notes: ${item.notes}\n` : '') +
+    `\nPlease help me work through this.`
+  );
+  // Opens Claude.ai with the task pre-loaded
+  window.open(`https://claude.ai/new?q=${prompt}`, '_blank');
+  toast('🤖 Opening Claude with your task…');
+}
+
+// ─────────────────────────────────────────────
+//  FIREBASE SYNC
+// ─────────────────────────────────────────────
+let DEL_DB = null;
+let pendingDelSave = false;
+
+function initFirebase() {
+  const cfg = window.BOB_FIREBASE_CONFIG;
+  if (!cfg || cfg.apiKey === 'PASTE_YOUR_API_KEY_HERE') return;
+  try {
+    // Re-use existing Firebase app if already initialized (bob.html opened first)
+    let app;
+    try { app = firebase.app(); } catch(e) { app = firebase.initializeApp(cfg); }
+    DEL_DB = firebase.firestore(app);
+    DEL_DB.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+
+    DEL_DB.collection('bob').doc('delegate').onSnapshot(doc => {
+      if (pendingDelSave) { pendingDelSave = false; return; }
+      if (!doc.exists) return;
+      const data = doc.data();
+      if (data && Array.isArray(data.delegated)) {
+        items = data.delegated;
+        localStorage.setItem(STORE_KEY, JSON.stringify(items));
+        renderAll();
+        toast('🔄 Delegated list synced');
+      }
+    }, err => console.warn('Delegate Firestore error:', err));
+  } catch(e) { console.warn('Firebase init error:', e); }
+}
+
+// Wrap save() with Firestore
+const _origSave = save;
+function save(render=true) {
+  localStorage.setItem(STORE_KEY, JSON.stringify(items));
+  if (render) renderAll();
+  if (DEL_DB) {
+    pendingDelSave = true;
+    DEL_DB.collection('bob').doc('delegate').set(
+      { delegated: items, lastUpdated: firebase.firestore.FieldValue.serverTimestamp() }
+    ).catch(e => { pendingDelSave = false; });
+  }
+}
+
+// Service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+// Init
+load();
+renderAll();
+initFirebase();
+
+// Accept items pushed from Bob via URL hash
+if (location.hash && location.hash.startsWith('#add=')) {
+  try {
+    const data = JSON.parse(decodeURIComponent(location.hash.slice(5)));
+    if (data.title && !items.find(i=>i.id===data.id)) {
+      items.unshift({ id: data.id||uid(), title: data.title, owner: data.owner||'', priority: data.priority||'normal', dueDate: data.dueDate||null, completed: false, addedAt: Date.now(), notes: data.notes||'' });
+      save();
+      toast('📥 Item received from Bob');
+    }
+    history.replaceState(null,'',location.pathname);
+  } catch(e) {}
+}
+</script>
+</body>
+</html>

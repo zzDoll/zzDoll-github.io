@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bob</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#6366f1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Bob" />
+  <link rel="apple-touch-icon" href="bob-logo.png" />
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <!-- Bob Firebase config (fill in firebase-config.js to enable sync) -->
+  <script src="firebase-config.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #f0f2f5;
+      --card:         #ffffff;
+      --border:       #e1e5eb;
+      --text:         #1a1d23;
+      --muted:        #6b7280;
+      --accent:       #6366f1;
+      --urgent:       #ef4444;
+      --high:         #f97316;
+      --normal:       #3b82f6;
+      --low:          #9ca3af;
+      --gmail:        #ea4335;
+      --jira:         #0052cc;
+      --calendar:     #0b8043;
+      --manual:       #7c3aed;
+      --done:         #22c55e;
+
+      /* Column theme: initiatives */
+      --init-bg:      #1e1b4b;
+      --init-text:    #e0e7ff;
+      --init-muted:   #a5b4fc;
+      --init-border:  #312e81;
+      --init-hover:   #312e81;
+      --init-sel:     #4338ca;
+      --init-sel-txt: #ffffff;
+
+      /* Column theme: projects */
+      --proj-accent:  #4f46e5;
+      --proj-bar:     #4f46e5;
+
+      /* Column theme: tasks */
+      --task-accent:  #15803d;
+      --task-bar:     #15803d;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: grid;
+      grid-template-columns: 252px 1fr;
+      overflow: hidden;
+    }
+
+    /* ══════════════════════════════════════
+       SIDEBAR LEFT — logo + initiatives
+    ══════════════════════════════════════ */
+    .sidebar-left {
+      display: flex; flex-direction: column;
+      height: 100vh; overflow: hidden;
+      background: var(--init-bg);
+      border-right: 1px solid var(--init-border);
+    }
+
+    .logo-section {
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      padding: 10px 8px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+    }
+    .logo-section img {
+      width: 168px; height: 168px; object-fit: contain;
+    }
+
+    /* ══════════════════════════════════════
+       RIGHT SIDE — controls strip + columns
+    ══════════════════════════════════════ */
+    .right-side {
+      display: flex; flex-direction: column;
+      height: 100vh; overflow: hidden;
+    }
+
+    .controls-strip {
+      flex-shrink: 0;
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 16px; height: 56px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 1px 6px rgba(0,0,0,.07);
+      z-index: 200;
+    }
+
+    .right-columns {
+      display: grid; grid-template-columns: 1fr 1fr;
+      flex: 1; overflow: hidden;
+    }
+
+    /* ── delegate nav link ── */
+    .del-nav {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 11.5px; font-weight: 600; color: #f97316;
+      padding: 5px 10px; border: 1.5px solid #fed7aa;
+      border-radius: 8px; cursor: pointer; text-decoration: none;
+      transition: all .15s; flex-shrink: 0; white-space: nowrap;
+    }
+    .del-nav:hover { background: #fff7ed; }
+
+    .divider-v { width: 1px; height: 28px; background: var(--border); flex-shrink: 0; }
+
+    /* Type toggle */
+    .type-toggle { display: flex; border: 1.5px solid var(--border); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
+    .type-btn {
+      padding: 5px 13px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+      border: none; background: transparent; color: var(--muted); transition: all .15s; white-space: nowrap;
+    }
+    .type-btn.t-task { background: #f0fdf4; color: var(--task-accent); }
+    .type-btn.t-proj { background: #eef2ff; color: var(--proj-accent); }
+
+    /* Initiative picker (shown when adding a project) */
+    .init-picker {
+      display: none; align-items: center; gap: 6px; flex-shrink: 0;
+    }
+    .init-picker.visible { display: flex; }
+    .init-picker label { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+
+    /* Project picker (shown when adding a task) */
+    .proj-picker {
+      display: none; align-items: center; gap: 6px; flex-shrink: 0;
+    }
+    .proj-picker.visible { display: flex; }
+    .proj-picker label { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+
+    select.init-sel {
+      font-size: 12px; padding: 4px 8px; border: 1px solid var(--border);
+      border-radius: 7px; background: white; outline: none; cursor: pointer;
+      color: var(--text); max-width: 220px;
+    }
+
+    /* Quick-add */
+    .quick-add {
+      flex: 1; display: flex; align-items: center; gap: 8px;
+      background: #f4f5f7; border: 1.5px solid var(--border);
+      border-radius: 10px; padding: 0 12px; height: 36px;
+      transition: border-color .15s, box-shadow .15s; min-width: 0;
+    }
+    .quick-add:focus-within { border-color: var(--accent); background: white; box-shadow: 0 0 0 3px rgba(99,102,241,.12); }
+    .quick-add input { flex: 1; border: none; background: transparent; font-size: 13.5px; outline: none; color: var(--text); min-width: 0; }
+    .quick-add input::placeholder { color: var(--muted); }
+    .qa-sep { width: 1px; height: 18px; background: var(--border); flex-shrink: 0; }
+    select.qa-pri { border: none; background: transparent; font-size: 12.5px; cursor: pointer; outline: none; padding: 0 2px; color: var(--text); flex-shrink: 0; }
+
+    .btn { padding: 6px 14px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; transition: all .15s; flex-shrink: 0; }
+    .btn-add { background: var(--accent); color: white; }
+    .btn-add:hover { background: #4f46e5; }
+
+    .sync-pill {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 11px; color: var(--muted); white-space: nowrap;
+      padding: 4px 10px; background: var(--bg); border-radius: 20px;
+      border: 1px solid var(--border); cursor: pointer; flex-shrink: 0; transition: border-color .15s;
+    }
+    .sync-pill:hover { border-color: var(--accent); }
+    .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--done); flex-shrink: 0; }
+    .sync-dot.stale { background: #f59e0b; animation: pulse 2s infinite; }
+    .countdown-chip { font-size: 10.5px; color: var(--muted); border: 1px solid var(--border); border-radius: 20px; padding: 3px 9px; background: var(--bg); flex-shrink: 0; }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+
+    /* ── INITIATIVES LIST (inside sidebar-left) ── */
+    .col-init {
+      flex: 1;
+      padding: 16px 12px;
+      display: flex; flex-direction: column; gap: 4px;
+      overflow-y: auto;
+    }
+
+    .init-col-hdr {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .init-col-title { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--init-muted); }
+    .init-refresh-btn {
+      font-size: 10px; color: var(--init-muted); cursor: pointer;
+      background: transparent; border: 1px solid var(--init-border);
+      border-radius: 5px; padding: 2px 7px; transition: all .15s;
+    }
+    .init-refresh-btn:hover { color: white; border-color: #6366f1; }
+
+    .init-item {
+      display: flex; align-items: flex-start; gap: 8px;
+      padding: 8px 10px; border-radius: 8px; cursor: pointer;
+      transition: background .12s; border: 1px solid transparent;
+    }
+    .init-item:hover { background: var(--init-hover); }
+    .init-item.selected { background: var(--init-sel); border-color: #818cf8; }
+
+    .init-dot {
+      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 4px;
+    }
+    .s-active  { background: #4ade80; }
+    .s-discuss { background: #fbbf24; }
+    .s-pending { background: #f97316; }
+    .s-testing { background: #60a5fa; }
+    .s-todo    { background: #6b7280; }
+
+    .init-info { flex: 1; min-width: 0; }
+    .init-title { font-size: 12.5px; font-weight: 600; color: var(--init-text); line-height: 1.35; word-break: break-word; }
+    .init-key   { font-size: 10px; color: var(--init-muted); margin-top: 2px; }
+    .init-proj-count { font-size: 10px; background: rgba(255,255,255,.1); color: var(--init-muted); padding: 1px 5px; border-radius: 6px; white-space: nowrap; flex-shrink: 0; margin-top: 2px; }
+
+    .init-link-btn { font-size: 9.5px; color: var(--init-muted); }
+    .init-link-btn a { color: inherit; text-decoration: none; }
+    .init-link-btn a:hover { color: #a5b4fc; }
+
+    /* Task-project link tag */
+    .task-proj-tag {
+      display: inline-flex; align-items: center; gap: 3px;
+      font-size: 10px; font-weight: 600; color: var(--proj-accent);
+      background: #eef2ff; border: 1px solid #c7d2fe;
+      border-radius: 4px; padding: 1px 6px; margin-top: 3px; cursor: pointer;
+    }
+    .task-proj-tag:hover { background: #e0e7ff; }
+
+    /* Proj task count chip */
+    .proj-task-count {
+      font-size: 10px; background: #eef2ff; color: var(--proj-accent);
+      padding: 1px 6px; border-radius: 5px; border: 1px solid #c7d2fe;
+      white-space: nowrap; margin-left: 4px;
+    }
+
+    .init-section-sep { height: 1px; background: var(--init-border); margin: 8px 0; }
+    .init-clear-btn {
+      font-size: 10.5px; color: var(--init-muted); text-align: center; padding: 6px;
+      cursor: pointer; border-radius: 6px; border: 1px solid var(--init-border);
+      background: transparent; transition: all .15s; margin-top: 4px;
+    }
+    .init-clear-btn:hover { color: white; border-color: #6366f1; }
+
+    /* ── PROJECTS & TASKS COLUMNS ── */
+    .col-main {
+      padding: 16px 16px;
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+    }
+    .col-main:last-child { border-right: none; }
+
+    .col-hdr {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2.5px solid;
+    }
+    .col-hdr.h-proj { border-color: var(--proj-bar); }
+    .col-hdr.h-task { border-color: var(--task-bar); }
+
+    .col-title { display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 800; letter-spacing: -.3px; }
+    .col-badge { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 10px; color: white; }
+    .b-proj { background: var(--proj-bar); }
+    .b-task { background: var(--task-bar); }
+
+    .col-filter-tag {
+      font-size: 11px; color: var(--proj-accent); background: #eef2ff;
+      padding: 3px 9px; border-radius: 10px; border: 1px solid #c7d2fe;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .filter-tag-x { cursor: pointer; font-size: 12px; }
+
+    .col-stats { display: flex; gap: 6px; }
+    .mini-stat { font-size: 10.5px; color: var(--muted); background: var(--bg); padding: 2px 7px; border-radius: 5px; border: 1px solid var(--border); }
+    .mini-stat strong { font-weight: 700; }
+
+    /* ── SECTION HEADERS ── */
+    .sec-hdr { display: flex; align-items: center; gap: 6px; margin: 14px 0 6px; }
+    .sec-hdr:first-child { margin-top: 0; }
+    .sec-title { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; }
+    .sec-cnt { font-size: 9.5px; background: var(--border); padding: 1px 6px; border-radius: 5px; color: var(--muted); }
+
+    /* ── PROJECT CARDS ── */
+    .proj-card {
+      background: var(--card); border: 1px solid #c7d2fe; border-left: 3px solid var(--proj-bar);
+      border-radius: 9px; padding: 12px 14px; margin-bottom: 7px;
+      transition: box-shadow .15s, opacity .2s;
+    }
+    .proj-card:hover { box-shadow: 0 3px 14px rgba(79,70,229,.12); }
+    .proj-card.done { opacity: .38; }
+    .proj-card.done .proj-title { text-decoration: line-through; color: var(--muted); }
+
+    .proj-init-tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 10px; font-weight: 600; color: #6366f1;
+      background: #eef2ff; border: 1px solid #c7d2fe;
+      border-radius: 4px; padding: 1px 7px; margin-bottom: 6px; cursor: pointer;
+    }
+    .proj-init-tag:hover { background: #e0e7ff; }
+
+    .proj-title { font-size: 14px; font-weight: 700; line-height: 1.4; margin-bottom: 7px; word-break: break-word; }
+    .proj-notes { font-size: 12px; color: #4b5563; line-height: 1.55; margin-bottom: 8px; word-break: break-word; }
+    .proj-meta  { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+    .proj-actions {
+      display: flex; gap: 5px; margin-top: 9px; padding-top: 8px;
+      border-top: 1px solid #e0e7ff; align-items: center;
+    }
+
+    /* ── TASK CARDS ── */
+    .task-card {
+      background: var(--card); border: 1px solid var(--border); border-left: 3px solid var(--task-bar);
+      border-radius: 8px; padding: 8px 11px; margin-bottom: 5px;
+      display: flex; align-items: flex-start; gap: 9px;
+      transition: box-shadow .15s, opacity .2s;
+    }
+    .task-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,.07); }
+    .task-card.done  { opacity: .38; }
+    .task-card.done .task-title { text-decoration: line-through; color: var(--muted); }
+    .task-card.urg   { border-left-color: var(--urgent); }
+    .task-card.hi    { border-left-color: var(--high); }
+
+    .check {
+      width: 17px; height: 17px; border-radius: 50%; border: 2px solid var(--border);
+      cursor: pointer; flex-shrink: 0; margin-top: 1px;
+      display: flex; align-items: center; justify-content: center; transition: all .15s;
+    }
+    .check:hover { border-color: var(--done); }
+    .check.chk { background: var(--done); border-color: var(--done); }
+
+    .task-body { flex: 1; min-width: 0; }
+    .task-title { font-size: 13px; font-weight: 500; line-height: 1.4; margin-bottom: 4px; word-break: break-word; }
+    .task-meta  { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+    .task-notes-snip { font-size: 11px; color: #9ca3af; margin-top: 4px; cursor: pointer; line-height: 1.4; }
+    .task-notes-area {
+      width: 100%; margin-top: 6px; padding: 6px 9px; border: 1px solid var(--border);
+      border-radius: 6px; font-size: 11.5px; color: var(--muted); resize: vertical;
+      min-height: 46px; font-family: inherit; line-height: 1.5;
+    }
+    .task-notes-area:focus { outline: none; border-color: var(--accent); }
+    .task-actions { display: flex; gap: 4px; flex-shrink: 0; opacity: 0; transition: opacity .15s; align-items: flex-start; padding-top: 1px; }
+    .task-card:hover .task-actions { opacity: 1; }
+
+    /* ── SHARED BADGES / ACTIONS ── */
+    .badge { font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; }
+    .bp-urgent { background:#fef2f2; color:var(--urgent); }
+    .bp-high   { background:#fff7ed; color:var(--high); }
+    .bp-normal { background:#eff6ff; color:var(--normal); }
+    .bp-low    { background:#f9fafb; color:var(--low); border:1px solid #e5e7eb; }
+    .bs-gmail    { background:#fef2f2; color:var(--gmail); }
+    .bs-jira     { background:#eff6ff; color:var(--jira); }
+    .bs-calendar { background:#f0fdf4; color:var(--calendar); }
+    .bs-manual   { background:#f5f3ff; color:var(--manual); }
+    .meta-date   { font-size: 10px; color: var(--muted); }
+
+    .act-btn {
+      padding: 3px 7px; border-radius: 5px; border: 1px solid var(--border);
+      background: white; cursor: pointer; font-size: 10.5px; color: var(--muted); transition: all .1s;
+    }
+    .act-btn:hover { border-color: #aaa; color: var(--text); }
+    .act-btn.del:hover { border-color: var(--urgent); color: var(--urgent); }
+    select.pri-ch {
+      font-size: 10.5px; padding: 2px 4px; border: 1px solid var(--border);
+      border-radius: 5px; background: white; cursor: pointer; outline: none; color: var(--text);
+    }
+
+    /* ── EMPTY STATES ── */
+    .empty { text-align: center; padding: 36px 16px; color: var(--muted); }
+    .empty-icon { font-size: 28px; margin-bottom: 8px; }
+    .empty-text { font-size: 13px; }
+    .empty-hint { font-size: 11px; margin-top: 5px; }
+    kbd { display: inline-block; padding: 1px 5px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 3px; font-size: 10px; font-family: monospace; }
+
+    /* ── DRAG AND DROP ── */
+    .card-dragging { opacity: .4; transform: scale(.98); transition: opacity .15s, transform .15s; }
+    .drop-zone-active {
+      outline: 2.5px dashed var(--accent); outline-offset: -4px;
+      background: #f0f4ff; border-radius: 4px;
+    }
+    .col-main.drop-target { background: #f5f3ff; transition: background .15s; }
+    .drag-handle {
+      cursor: grab; font-size: 13px; color: var(--muted); padding: 2px 4px;
+      border-radius: 4px; flex-shrink: 0; opacity: 0; transition: opacity .15s;
+      user-select: none;
+    }
+    .proj-card:hover .drag-handle,
+    .task-card:hover .drag-handle { opacity: 1; }
+    .drag-handle:active { cursor: grabbing; }
+
+    /* ── TOASTS ── */
+    .toast-wrap { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 7px; z-index: 999; }
+    .toast { background: #1a1d23; color: white; padding: 9px 14px; border-radius: 9px; font-size: 12.5px; box-shadow: 0 4px 14px rgba(0,0,0,.2); animation: slideIn .2s ease; pointer-events: none; }
+    .toast.good { background: #166534; }
+    @keyframes slideIn { from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)} }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+    .col-init::-webkit-scrollbar-thumb { background: #4338ca; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     HEADER
+═══════════════════════════════════════════ -->
+<!-- ═══════════════════════════════════════════
+     SIDEBAR LEFT — Bob logo + Initiatives
+═══════════════════════════════════════════ -->
+<div class="sidebar-left">
+  <div class="logo-section">
+    <img src="bob-logo.png" alt="Bob" title="Bob's your uncle!" />
+  </div>
+  <div class="col-init">
+    <div class="init-col-hdr">
+      <span class="init-col-title">Initiatives</span>
+      <button class="init-refresh-btn" onclick="loadInitiatives()" title="Reload from initiatives.js">↻ Refresh</button>
+    </div>
+    <div id="initList">
+      <div style="color:#a5b4fc;font-size:12px;padding:8px">Loading initiatives…</div>
+    </div>
+    <div class="init-section-sep" id="initClearSep" style="display:none"></div>
+    <button class="init-clear-btn" id="initClearBtn" style="display:none" onclick="clearInitFilter()">✕ Show all projects</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     RIGHT SIDE — Controls + Projects + Tasks
+═══════════════════════════════════════════ -->
+<div class="right-side">
+
+  <!-- Controls strip -->
+  <div class="controls-strip">
+    <div class="type-toggle">
+      <button id="btnTask" class="type-btn t-task" onclick="setAddType('task')">✅ Task</button>
+      <button id="btnProj" class="type-btn"        onclick="setAddType('project')">📋 Project</button>
+    </div>
+
+    <!-- Project picker (visible when adding a task) -->
+    <div class="proj-picker visible" id="projPicker">
+      <label>→ Project:</label>
+      <select class="init-sel" id="projLinkSel">
+        <option value="">Unassigned</option>
+      </select>
+    </div>
+
+    <!-- Initiative picker (visible when adding a project) -->
+    <div class="init-picker" id="initPicker">
+      <label>→ Initiative:</label>
+      <select class="init-sel" id="initLinkSel">
+        <option value="">None</option>
+      </select>
+    </div>
+
+    <div class="quick-add">
+      <input id="qInput" type="text" placeholder="Add task… (press N)" autocomplete="off" />
+      <div class="qa-sep"></div>
+      <select id="qPri" class="qa-pri">
+        <option value="urgent">🔴 Urgent</option>
+        <option value="high">🟠 High</option>
+        <option value="normal" selected>🔵 Normal</option>
+        <option value="low">⚪ Low</option>
+      </select>
+    </div>
+    <button class="btn btn-add" onclick="addItem()">+ Add</button>
+
+    <div class="countdown-chip" id="cdChip">60s</div>
+
+    <div class="sync-pill" onclick="manualRefresh()" title="Click to check for new items">
+      <div class="sync-dot" id="syncDot"></div>
+      <span id="syncLbl">Loading…</span>
+    </div>
+
+    <!-- Navigate to Delegated list -->
+    <a class="del-nav" href="delegate.html" target="_blank" title="Open Delegated list (Shift+D to delegate hovered card)">🤝 Delegated</a>
+  </div>
+
+  <!-- Projects + Tasks columns -->
+  <div class="right-columns">
+
+    <!-- Projects column -->
+    <div class="col-main" id="colProjects"
+         ondragover="colDragOver(event,'project')"
+         ondragleave="colDragLeave(event)"
+         ondrop="colDrop(event,'project')"
+         ondragend="dragEnd(event)">
+      <div class="col-hdr h-proj">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div class="col-title">
+            <span>📋</span><span>Projects &amp; Strategy</span>
+            <span class="col-badge b-proj" id="projCount">0</span>
+          </div>
+          <div id="projFilterTag"></div>
+        </div>
+        <div class="col-stats" id="projStats"></div>
+      </div>
+      <div id="projGroups"></div>
+      <div id="projEmpty" class="empty" style="display:none">
+        <div class="empty-icon">🎯</div>
+        <div class="empty-text">No projects yet</div>
+        <div class="empty-hint">Switch to 📋 Project above and add one.</div>
+      </div>
+    </div>
+
+    <!-- Tasks column -->
+    <div class="col-main" id="colTasks"
+         ondragover="colDragOver(event,'task')"
+         ondragleave="colDragLeave(event)"
+         ondrop="colDrop(event,'task')"
+         ondragend="dragEnd(event)">
+      <div class="col-hdr h-task">
+        <div class="col-title">
+          <span>✅</span><span>Tasks</span>
+          <span class="col-badge b-task" id="taskCount">0</span>
+        </div>
+        <div class="col-stats" id="taskStats"></div>
+      </div>
+      <div id="taskGroups"></div>
+      <div id="taskEmpty" class="empty" style="display:none">
+        <div class="empty-icon">✨</div>
+        <div class="empty-text">All clear!</div>
+        <div class="empty-hint">Press <kbd>N</kbd> to capture something.</div>
+      </div>
+    </div>
+
+  </div><!-- /.right-columns -->
+</div><!-- /.right-side -->
+
+<div class="toast-wrap" id="toasts"></div>
+
+<script>
+// ─────────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────────
+const STORE_KEY   = 'bob_v3';
+const SYNC_KEY    = 'bob_sync';
+const REFRESH_SEC = 60;
+
+let items          = [];
+let initiatives    = [];
+let openNotes      = {};
+let addType        = 'task';
+let filterInitKey  = null;   // null = show all, "SH-XXXXX" = filter
+let countdown      = REFRESH_SEC;
+let cdTimer;
+
+// ─────────────────────────────────────────────
+//  TYPE HELPERS
+// ─────────────────────────────────────────────
+function inferType(item) {
+  if (item.type) return item.type;
+  if (item.source === 'jira') return 'project';
+  return 'task';
+}
+
+// ─────────────────────────────────────────────
+//  STORAGE
+// ─────────────────────────────────────────────
+function loadItems() {
+  try {
+    // Try new key first, then migrate from older keys
+    let raw = localStorage.getItem(STORE_KEY)
+           || localStorage.getItem('bob_v2')
+           || localStorage.getItem('bob_v1');
+    items = JSON.parse(raw) || [];
+    items = items.map(i => ({...i, type: inferType(i)}));
+  } catch { items = []; }
+}
+
+function save(render=true) {
+  localStorage.setItem(STORE_KEY, JSON.stringify(items));
+  if (render) renderAll();
+  updateTabTitle();
+}
+
+// ─────────────────────────────────────────────
+//  INITIATIVES
+// ─────────────────────────────────────────────
+function loadInitiatives() {
+  const s = document.createElement('script');
+  s.src = 'initiatives.js?t=' + Date.now();
+  s.onload = () => {
+    if (window.BOB_INITIATIVES && Array.isArray(window.BOB_INITIATIVES)) {
+      initiatives = window.BOB_INITIATIVES;
+      window.BOB_INITIATIVES = null;
+      renderInitiatives();
+      populateInitPicker();
+    }
+  };
+  s.onerror = () => { renderInitiatives(); }; // show empty state gracefully
+  document.head.appendChild(s);
+}
+
+function renderInitiatives() {
+  const list = document.getElementById('initList');
+  if (!initiatives.length) {
+    list.innerHTML = '<div style="color:#a5b4fc;font-size:12px;padding:8px">No initiatives loaded</div>';
+    return;
+  }
+  list.innerHTML = initiatives.map(init => {
+    const projCount = items.filter(i => inferType(i)==='project' && i.initiativeKey===init.key && !i.completed).length;
+    const sel = filterInitKey === init.key;
+    return `
+    <div class="init-item ${sel?'selected':''}" onclick="toggleInitFilter('${init.key}')" id="init-${init.key}">
+      <div class="init-dot s-${init.status}"></div>
+      <div class="init-info">
+        <div class="init-title">${esc(init.title)}</div>
+        <div style="display:flex;align-items:center;gap:5px;margin-top:3px">
+          <span class="init-key">${esc(init.key)}</span>
+          <a class="init-link-btn" href="${esc(init.url)}" target="_blank" onclick="event.stopPropagation()" title="Open in Jira">↗</a>
+        </div>
+      </div>
+      ${projCount ? `<span class="init-proj-count">${projCount}</span>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function populateInitPicker() {
+  const sel = document.getElementById('initLinkSel');
+  sel.innerHTML = '<option value="">None</option>' +
+    initiatives.map(i => `<option value="${esc(i.key)}">${esc(i.key)} — ${esc(i.title)}</option>`).join('');
+}
+
+function toggleInitFilter(key) {
+  filterInitKey = (filterInitKey === key) ? null : key;
+  renderInitiatives();
+  renderAll();
+  const sep = document.getElementById('initClearSep');
+  const btn = document.getElementById('initClearBtn');
+  sep.style.display = filterInitKey ? 'block' : 'none';
+  btn.style.display  = filterInitKey ? 'block' : 'none';
+}
+
+function clearInitFilter() {
+  filterInitKey = null;
+  renderInitiatives();
+  renderAll();
+  document.getElementById('initClearSep').style.display = 'none';
+  document.getElementById('initClearBtn').style.display = 'none';
+}
+
+// ─────────────────────────────────────────────
+//  AUTO-IMPORT  (new_tasks.js)
+// ─────────────────────────────────────────────
+function tryAutoImport(silent=false) {
+  const s = document.createElement('script');
+  s.src = 'new_tasks.js?t=' + Date.now();
+  s.onload = () => {
+    if (window.PH_TASKS && Array.isArray(window.PH_TASKS)) {
+      let n = 0;
+      window.PH_TASKS.forEach(t => {
+        if (!items.find(e => e.id === t.id)) {
+          items.push({...t, type: inferType(t), addedAt: t.addedAt || Date.now()});
+          n++;
+        }
+      });
+      if (n > 0) {
+        save();
+        localStorage.setItem(SYNC_KEY, new Date().toISOString());
+        toast(`✅ ${n} new item${n>1?'s':''} imported`, 'good');
+        setSyncStatus(true);
+      } else if (!silent) {
+        setSyncStatus(true);
+      }
+    }
+    window.PH_TASKS = null;
+  };
+  s.onerror = () => { if (!silent) setSyncStatus(false); };
+  document.head.appendChild(s);
+}
+
+function manualRefresh() {
+  countdown = REFRESH_SEC;
+  updateCountdown();
+  tryAutoImport(false);
+  loadInitiatives();
+  toast('🔄 Checking for new items…');
+}
+
+// ─────────────────────────────────────────────
+//  ADD / TOGGLE / REMOVE
+// ─────────────────────────────────────────────
+function uid() { return (addType==='project'?'proj_':'task_') + Date.now() + '_' + Math.random().toString(36).slice(2,5); }
+
+function addItem() {
+  const input = document.getElementById('qInput');
+  const title = input.value.trim();
+  if (!title) { input.focus(); toast('⚠️ Type something first'); return; }
+  const priority      = document.getElementById('qPri').value;
+  const initiativeKey = addType === 'project' ? (document.getElementById('initLinkSel').value || null) : null;
+  const projectId     = addType === 'task'    ? (document.getElementById('projLinkSel').value || null) : null;
+  items.unshift({
+    id: uid(), title, priority, source: 'manual', type: addType,
+    completed: false, addedAt: Date.now(), notes: '',
+    initiativeKey: initiativeKey || undefined,
+    projectId: projectId || undefined
+  });
+  input.value = '';
+  save();
+  toast(addType==='project' ? '📋 Project added' : '✅ Task captured');
+  input.focus();
+}
+
+function toggle(id) {
+  const item = items.find(i=>i.id===id);
+  if (!item) return;
+  item.completed = !item.completed;
+  item.completedAt = item.completed ? Date.now() : null;
+  save();
+}
+
+function remove(id) {
+  const item = items.find(i=>i.id===id);
+  const label = item?.type === 'project' ? 'project' : 'task';
+  if (!confirm(`Remove this ${label} from Bob?`)) return;
+  items = items.filter(i=>i.id!==id);
+  delete openNotes[id];
+  save();
+}
+
+function changePri(id, v) {
+  const item = items.find(i=>i.id===id);
+  if (item) { item.priority = v; save(); }
+}
+
+function saveNote(id, v) {
+  const item = items.find(i=>i.id===id);
+  if (item) { item.notes = v; save(false); }
+}
+
+function toggleNote(id) { openNotes[id] = !openNotes[id]; renderAll(); }
+
+function setInitOnProject(id, key) {
+  const item = items.find(i=>i.id===id);
+  if (item) { item.initiativeKey = key || undefined; save(); renderInitiatives(); }
+}
+
+function setProjectOnTask(id, projId) {
+  const item = items.find(i=>i.id===id);
+  if (item) { item.projectId = projId || undefined; save(); }
+}
+
+function setInitOnTask(id, key) {
+  const item = items.find(i=>i.id===id);
+  if (item) { item.initiativeKey = key || undefined; save(); renderInitiatives(); }
+}
+
+let lastHoveredId = null;
+
+// ─────────────────────────────────────────────
+//  DRAG AND DROP  (move items between columns)
+// ─────────────────────────────────────────────
+let dragId = null;
+
+function dragStart(e, id) {
+  dragId = id;
+  const card = document.getElementById('card-' + id);
+  if (card) card.classList.add('card-dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', id);
+}
+
+function dragEnd(e) {
+  if (dragId) {
+    const card = document.getElementById('card-' + dragId);
+    if (card) card.classList.remove('card-dragging');
+  }
+  dragId = null;
+  document.querySelectorAll('.col-main').forEach(c => c.classList.remove('drop-target'));
+}
+
+function colDragOver(e, targetType) {
+  const item = items.find(i => i.id === dragId);
+  if (!item || inferType(item) === targetType) return; // already that type
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  const col = targetType === 'project' ? document.getElementById('colProjects') : document.getElementById('colTasks');
+  col.classList.add('drop-target');
+}
+
+function colDragLeave(e) {
+  // Only remove when truly leaving the column (not a child)
+  if (!e.currentTarget.contains(e.relatedTarget)) {
+    e.currentTarget.classList.remove('drop-target');
+  }
+}
+
+function colDrop(e, targetType) {
+  e.preventDefault();
+  const id = e.dataTransfer.getData('text/plain') || dragId;
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  const oldType = inferType(item);
+  if (oldType === targetType) return;
+  item.type = targetType;
+  // If moving to task, clear initiativeKey; if moving to project, clear projectId
+  if (targetType === 'task')    { item.initiativeKey = undefined; }
+  if (targetType === 'project') { item.projectId     = undefined; }
+  save();
+  toast(targetType === 'project' ? '📋 Moved to Projects' : '✅ Moved to Tasks');
+  document.querySelectorAll('.col-main').forEach(c => c.classList.remove('drop-target'));
+  dragId = null;
+}
+
+// ─────────────────────────────────────────────
+//  DELEGATE  (send to delegate.html list)
+// ─────────────────────────────────────────────
+function delegateItem(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  const owner = prompt('Who is this delegated to?', '') || '';
+  // Write directly into the delegate store (same origin, same localStorage)
+  try {
+    let delItems = JSON.parse(localStorage.getItem('bob_delegate_v1')) || [];
+    if (delItems.find(d => d.id === item.id)) { toast('Already in Delegated list'); return; }
+    delItems.unshift({
+      id: item.id, title: item.title, owner: owner || 'Unassigned',
+      priority: item.priority, dueDate: item.dueDate || null,
+      completed: false, addedAt: Date.now(),
+      notes: item.notes || ''
+    });
+    localStorage.setItem('bob_delegate_v1', JSON.stringify(delItems));
+    // Remove from Bob
+    items = items.filter(i => i.id !== id);
+    save();
+    toast('🤝 Delegated to ' + (owner || 'Unassigned') + ' — open Delegate list to track');
+  } catch(e) { toast('⚠️ Could not delegate'); }
+}
+
+function populateProjPicker() {
+  const sel = document.getElementById('projLinkSel');
+  const projects = items.filter(i => inferType(i)==='project' && !i.completed);
+  sel.innerHTML = '<option value="">Unassigned</option>' +
+    projects.map(p => `<option value="${esc(p.id)}">${esc(p.title.slice(0,50))}</option>`).join('');
+}
+
+function setAddType(t) {
+  addType = t;
+  document.getElementById('btnTask').className = 'type-btn' + (t==='task'  ? ' t-task' : '');
+  document.getElementById('btnProj').className = 'type-btn' + (t==='project'? ' t-proj' : '');
+  document.getElementById('initPicker').className = 'init-picker' + (t==='project' ? ' visible' : '');
+  document.getElementById('projPicker').className = 'proj-picker' + (t==='task'    ? ' visible' : '');
+  document.getElementById('qInput').placeholder = t==='project'
+    ? 'Add a strategy or project… (press N)'
+    : 'Add task… (press N)';
+}
+
+// ─────────────────────────────────────────────
+//  RENDER
+// ─────────────────────────────────────────────
+const P_LABEL = {urgent:'Urgent', high:'High', normal:'Normal', low:'Low'};
+const P_COLOR = {urgent:'#ef4444', high:'#f97316', normal:'#3b82f6', low:'#9ca3af'};
+const P_BADGE = {urgent:'bp-urgent', high:'bp-high', normal:'bp-normal', low:'bp-low'};
+const S_LABEL = {gmail:'Gmail', jira:'Jira', calendar:'Calendar', manual:'Manual'};
+const S_ICON  = {gmail:'✉️', jira:'🎯', calendar:'📅', manual:'✏️'};
+const S_BADGE = {gmail:'bs-gmail', jira:'bs-jira', calendar:'bs-calendar', manual:'bs-manual'};
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function age(ts) {
+  const d = Date.now()-ts;
+  if (d<60000) return 'just now';
+  if (d<3600000) return Math.floor(d/60000)+'m ago';
+  if (d<86400000) return Math.floor(d/3600000)+'h ago';
+  return Math.floor(d/86400000)+'d ago';
+}
+
+function initPickerHtml(currentKey) {
+  const opts = initiatives.map(i =>
+    `<option value="${esc(i.key)}" ${currentKey===i.key?'selected':''}>${esc(i.key)} — ${esc(i.title)}</option>`
+  ).join('');
+  return `<select class="pri-ch" style="font-size:10px;max-width:160px" onchange="setInitOnProject('__ID__',this.value)" title="Link to initiative"><option value="">No initiative</option>${opts}</select>`;
+}
+
+function projCardHtml(item) {
+  const init = item.initiativeKey ? initiatives.find(i=>i.key===item.initiativeKey) : null;
+  const ipHtml = initPickerHtml(item.initiativeKey || '').replace('__ID__', item.id);
+  const linkedTaskCount = items.filter(t => inferType(t)==='task' && t.projectId===item.id && !t.completed).length;
+  return `
+<div class="proj-card ${item.completed?'done':''}" id="card-${item.id}"
+     draggable="true"
+     ondragstart="dragStart(event,'${item.id}')"
+     ondragend="dragEnd(event)"
+     onmouseenter="lastHoveredId='${item.id}'">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+    <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;flex:1">
+      <span class="drag-handle" title="Drag to Tasks column to convert to task">⠿</span>
+      ${init ? `<div class="proj-init-tag" onclick="toggleInitFilter('${init.key}')">🏷 ${esc(init.key)} · ${esc(init.title.slice(0,30))}${init.title.length>30?'…':''}</div>` : ''}
+    </div>
+    ${linkedTaskCount ? `<span class="proj-task-count">✅ ${linkedTaskCount} task${linkedTaskCount>1?'s':''}</span>` : ''}
+  </div>
+  <div class="proj-title">${esc(item.title)}</div>
+  ${item.notes ? `<div class="proj-notes">${esc(item.notes)}</div>` : ''}
+  <div class="proj-meta">
+    <span class="badge ${P_BADGE[item.priority]||'bp-normal'}">${P_LABEL[item.priority]||item.priority}</span>
+    <span class="badge ${S_BADGE[item.source]||'bs-manual'}">${S_ICON[item.source]||'📌'} ${S_LABEL[item.source]||item.source}</span>
+    ${item.dueDate ? `<span class="meta-date">📆 ${esc(item.dueDate)}</span>` : ''}
+    <span class="meta-date">${age(item.addedAt)}</span>
+  </div>
+  <div class="proj-actions">
+    ${ipHtml}
+    <select class="pri-ch" onchange="changePri('${item.id}',this.value)">
+      <option value="urgent" ${item.priority==='urgent'?'selected':''}>🔴 Urgent</option>
+      <option value="high"   ${item.priority==='high'  ?'selected':''}>🟠 High</option>
+      <option value="normal" ${item.priority==='normal'?'selected':''}>🔵 Normal</option>
+      <option value="low"    ${item.priority==='low'   ?'selected':''}>⚪ Low</option>
+    </select>
+    <button class="act-btn" onclick="toggle('${item.id}')">${item.completed?'↩ Reopen':'✓ Done'}</button>
+    <button class="act-btn del" onclick="remove('${item.id}')">✕</button>
+  </div>
+</div>`;
+}
+
+function taskCardHtml(item) {
+  const noteOpen = !!openNotes[item.id];
+  const bc = item.priority==='urgent'?'urg':item.priority==='high'?'hi':'';
+  const linkedProj = item.projectId ? items.find(p=>p.id===item.projectId) : null;
+  const projOpts = '<option value="">Unassigned</option>' +
+    items.filter(p=>inferType(p)==='project'&&!p.completed)
+         .map(p=>`<option value="${esc(p.id)}" ${p.id===item.projectId?'selected':''}>${esc(p.title.slice(0,40))}</option>`).join('');
+  const initOpts = '<option value="">No initiative</option>' +
+    initiatives.map(i=>`<option value="${esc(i.key)}" ${i.key===item.initiativeKey?'selected':''}>${esc(i.key)} — ${esc(i.title.slice(0,28))}</option>`).join('');
+  return `
+<div class="task-card ${item.completed?'done':''} ${bc}" id="card-${item.id}"
+     draggable="true"
+     ondragstart="dragStart(event,'${item.id}')"
+     ondragend="dragEnd(event)"
+     onmouseenter="lastHoveredId='${item.id}'">
+  <span class="drag-handle" title="Drag to Projects column to convert to project">⠿</span>
+  <div class="check ${item.completed?'chk':''}" onclick="toggle('${item.id}')">
+    ${item.completed?'<svg width="9" height="9" viewBox="0 0 9 9"><polyline points="1,4.5 3.5,7 8,1.5" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>':''}
+  </div>
+  <div class="task-body">
+    <div class="task-title">${esc(item.title)}</div>
+    ${linkedProj ? `<div class="task-proj-tag" title="Linked project">📋 ${esc(linkedProj.title.slice(0,40))}${linkedProj.title.length>40?'…':''}</div>` : ''}
+    <div class="task-meta">
+      <span class="badge ${P_BADGE[item.priority]||'bp-normal'}">${P_LABEL[item.priority]||item.priority}</span>
+      <span class="badge ${S_BADGE[item.source]||'bs-manual'}">${S_ICON[item.source]||'📌'} ${S_LABEL[item.source]||item.source}</span>
+      ${item.dueDate ? `<span class="meta-date">📆 ${esc(item.dueDate)}</span>` : ''}
+      <span class="meta-date">${age(item.addedAt)}</span>
+    </div>
+    ${noteOpen
+      ? `<textarea class="task-notes-area" placeholder="Notes…" onchange="saveNote('${item.id}',this.value)">${esc(item.notes||'')}</textarea>`
+      : (item.notes ? `<div class="task-notes-snip" onclick="toggleNote('${item.id}')">📝 ${esc(item.notes.slice(0,90))}${item.notes.length>90?'…':''}</div>` : '')}
+  </div>
+  <div class="task-actions">
+    <select class="pri-ch" style="max-width:130px;font-size:10px" title="Link to project" onchange="setProjectOnTask('${item.id}',this.value)">${projOpts}</select>
+    <select class="pri-ch" style="max-width:130px;font-size:10px" title="Link to initiative" onchange="setInitOnTask('${item.id}',this.value)">${initOpts}</select>
+    <select class="pri-ch" onchange="changePri('${item.id}',this.value)">
+      <option value="urgent" ${item.priority==='urgent'?'selected':''}>🔴</option>
+      <option value="high"   ${item.priority==='high'  ?'selected':''}>🟠</option>
+      <option value="normal" ${item.priority==='normal'?'selected':''}>🔵</option>
+      <option value="low"    ${item.priority==='low'   ?'selected':''}>⚪</option>
+    </select>
+    <button class="act-btn" onclick="toggleNote('${item.id}')">📝</button>
+    <button class="act-btn" style="border-color:#fed7aa;color:#f97316" onclick="delegateItem('${item.id}')" title="Delegate to person (Shift+D)">🤝</button>
+    <button class="act-btn" style="border-color:#c7d2fe;color:#6366f1" onclick="delegateToBobAI('${item.id}')" title="Queue for Bob (AI agent)">🤖</button>
+    <button class="act-btn del" onclick="remove('${item.id}')">✕</button>
+  </div>
+</div>`;
+}
+
+function renderColumn(type) {
+  const isProj  = type === 'project';
+  const allActive = items.filter(i => inferType(i)===type && !i.completed);
+  const active  = isProj && filterInitKey
+    ? allActive.filter(i => i.initiativeKey === filterInitKey)
+    : allActive;
+  const done    = items.filter(i => inferType(i)===type && i.completed);
+
+  const groupsEl = document.getElementById(isProj?'projGroups':'taskGroups');
+  const emptyEl  = document.getElementById(isProj?'projEmpty':'taskEmpty');
+  const countEl  = document.getElementById(isProj?'projCount':'taskCount');
+  const statsEl  = document.getElementById(isProj?'projStats':'taskStats');
+
+  countEl.textContent = active.length;
+
+  const urgent = active.filter(i=>i.priority==='urgent').length;
+  const high   = active.filter(i=>i.priority==='high').length;
+  statsEl.innerHTML = [
+    urgent ? `<span class="mini-stat"><strong style="color:var(--urgent)">${urgent}</strong> urgent</span>` : '',
+    high   ? `<span class="mini-stat"><strong style="color:var(--high)">${high}</strong> high</span>` : '',
+    done.length ? `<span class="mini-stat"><strong>${done.length}</strong> done</span>` : ''
+  ].join('');
+
+  // Filter tag (projects column only)
+  if (isProj) {
+    const ftEl = document.getElementById('projFilterTag');
+    if (filterInitKey) {
+      const init = initiatives.find(i=>i.key===filterInitKey);
+      ftEl.innerHTML = `<span class="col-filter-tag">🏷 ${esc(filterInitKey)}${init?' · '+esc(init.title.slice(0,25)):''}<span class="filter-tag-x" onclick="clearInitFilter()">✕</span></span>`;
+    } else {
+      ftEl.innerHTML = '';
+    }
+  }
+
+  if (!active.length && !done.length) {
+    groupsEl.innerHTML = '';
+    emptyEl.style.display = 'block';
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  const buckets = {urgent:[],high:[],normal:[],low:[]};
+  active.forEach(i => (buckets[i.priority]||buckets.normal).push(i));
+
+  let html = '';
+  ['urgent','high','normal','low'].forEach(p => {
+    const g = buckets[p]; if (!g.length) return;
+    g.sort((a,b)=>a.addedAt-b.addedAt);
+    html += `<div class="sec-hdr"><span class="sec-title" style="color:${P_COLOR[p]}">${P_LABEL[p]}</span><span class="sec-cnt">${g.length}</span></div>`;
+    g.forEach(i => html += isProj ? projCardHtml(i) : taskCardHtml(i));
+  });
+
+  if (done.length) {
+    html += `<div class="sec-hdr" style="margin-top:20px"><span class="sec-title" style="color:var(--done)">Completed</span><span class="sec-cnt">${done.length}</span></div>`;
+    done.slice(0,4).forEach(i => html += isProj ? projCardHtml(i) : taskCardHtml(i));
+    if (done.length > 4) html += `<div style="font-size:11px;color:var(--muted);text-align:center;padding:6px 0">+${done.length-4} more</div>`;
+  }
+
+  groupsEl.innerHTML = html;
+}
+
+function renderAll() {
+  renderColumn('project');
+  renderColumn('task');
+  populateProjPicker();
+}
+
+// ─────────────────────────────────────────────
+//  TAB TITLE
+// ─────────────────────────────────────────────
+function updateTabTitle() {
+  const u = items.filter(i=>i.priority==='urgent'&&!i.completed).length;
+  document.title = u > 0 ? `(${u} 🔴) Bob` : 'Bob';
+}
+
+// ─────────────────────────────────────────────
+//  SYNC STATUS & COUNTDOWN
+// ─────────────────────────────────────────────
+function setSyncStatus(ok) {
+  const last = localStorage.getItem(SYNC_KEY);
+  document.getElementById('syncDot').className = 'sync-dot' + (ok?'':' stale');
+  document.getElementById('syncLbl').textContent = last ? 'Synced '+age(new Date(last).getTime()) : 'Click to sync';
+}
+
+function updateCountdown() {
+  document.getElementById('cdChip').textContent = countdown+'s';
+}
+
+function startCountdown() {
+  clearInterval(cdTimer);
+  countdown = REFRESH_SEC;
+  cdTimer = setInterval(() => {
+    countdown--;
+    updateCountdown();
+    if (countdown <= 0) { tryAutoImport(true); countdown = REFRESH_SEC; }
+  }, 1000);
+}
+
+// ─────────────────────────────────────────────
+//  TOAST
+// ─────────────────────────────────────────────
+function toast(msg, type='') {
+  const wrap = document.getElementById('toasts');
+  const el   = document.createElement('div');
+  el.className = 'toast' + (type?' '+type:'');
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ─────────────────────────────────────────────
+//  KEYBOARD
+// ─────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  const tag = document.activeElement.tagName;
+  const typing = tag==='INPUT' || tag==='TEXTAREA' || tag==='SELECT';
+  if (e.key === 'n' && !typing) {
+    e.preventDefault();
+    document.getElementById('qInput').focus();
+  }
+  // Shift+D → delegate the last card you hovered
+  if (e.key === 'D' && e.shiftKey && !typing) {
+    e.preventDefault();
+    if (lastHoveredId) delegateItem(lastHoveredId);
+    else toast('⚠️ Hover a card first, then Shift+D to delegate');
+  }
+});
+document.getElementById('qInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addItem();
+  if (e.key === 'Escape') e.target.blur();
+});
+
+// ─────────────────────────────────────────────
+//  FIREBASE SYNC  (real-time cross-device)
+// ─────────────────────────────────────────────
+let BOB_DB = null;
+let pendingLocalSave = false;
+const FB_DOC = 'data';   // Firestore: collection "bob", document "data"
+
+function initFirebase() {
+  const cfg = window.BOB_FIREBASE_CONFIG;
+  if (!cfg || cfg.apiKey === 'PASTE_YOUR_API_KEY_HERE') return; // not configured yet
+  try {
+    const app = firebase.initializeApp(cfg);
+    BOB_DB = firebase.firestore(app);
+    BOB_DB.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+
+    // Real-time listener — updates all open tabs/devices instantly
+    BOB_DB.collection('bob').doc(FB_DOC).onSnapshot(doc => {
+      if (pendingLocalSave) { pendingLocalSave = false; return; } // our own save bouncing back
+      if (!doc.exists) return;
+      const data = doc.data();
+      if (data && Array.isArray(data.items)) {
+        items = data.items.map(i => ({...i, type: inferType(i)}));
+        localStorage.setItem(STORE_KEY, JSON.stringify(items));
+        renderAll();
+        updateTabTitle();
+        setSyncStatus(true);
+        toast('🔄 Synced from another device', '');
+      }
+    }, err => { console.warn('Firestore error:', err); setSyncStatus(false); });
+
+    setSyncPillLive(true);
+  } catch(e) { console.warn('Firebase init failed:', e); }
+}
+
+// Override save() to also push to Firestore
+const _saveLocal = save;
+function save(render=true) {
+  localStorage.setItem(STORE_KEY, JSON.stringify(items));
+  if (render) renderAll();
+  updateTabTitle();
+  if (BOB_DB) {
+    pendingLocalSave = true;
+    BOB_DB.collection('bob').doc(FB_DOC).set(
+      { items, lastUpdated: firebase.firestore.FieldValue.serverTimestamp(), lastDevice: navigator.platform },
+      { merge: false }
+    ).then(() => setSyncPillLive(true))
+     .catch(e => { pendingLocalSave = false; console.warn('Firestore save error:', e); setSyncPillLive(false); });
+  }
+}
+
+function setSyncPillLive(ok) {
+  const dot = document.getElementById('syncDot');
+  const lbl = document.getElementById('syncLbl');
+  if (!dot || !lbl) return;
+  dot.className = 'sync-dot' + (ok ? '' : ' stale');
+  lbl.textContent = ok ? (BOB_DB ? '🔥 Live' : 'Local only') : '⚠️ Offline';
+}
+
+// ─────────────────────────────────────────────
+//  DELEGATE TO BOB (AI)
+// ─────────────────────────────────────────────
+function delegateToBobAI(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  const note = prompt('What should Bob (AI) do with this?\n\nDescribe any extra context or instructions:', '') ;
+  if (note === null) return; // cancelled
+  try {
+    let delItems = JSON.parse(localStorage.getItem('bob_delegate_v1')) || [];
+    if (delItems.find(d => d.id === item.id)) { toast('Already in Delegated'); return; }
+    delItems.unshift({
+      id: item.id,
+      title: item.title,
+      owner: '🤖 Bob (AI)',
+      aiHandled: true,
+      priority: item.priority,
+      dueDate: item.dueDate || null,
+      completed: false,
+      addedAt: Date.now(),
+      notes: note || item.notes || '',
+      aiInstructions: note || ''
+    });
+    localStorage.setItem('bob_delegate_v1', JSON.stringify(delItems));
+    if (BOB_DB) {
+      BOB_DB.collection('bob').doc('delegate').set(
+        { delegated: delItems, lastUpdated: firebase.firestore.FieldValue.serverTimestamp() },
+        { merge: false }
+      ).catch(() => {});
+    }
+    items = items.filter(i => i.id !== id);
+    save();
+    toast('🤖 Queued for Bob (AI) — open Delegated to run it');
+  } catch(e) { toast('⚠️ Could not queue'); }
+}
+
+// ─────────────────────────────────────────────
+//  SERVICE WORKER  (offline + installable PWA)
+// ─────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => {
+        reg.addEventListener('updatefound', () => {
+          const w = reg.installing;
+          w.addEventListener('statechange', () => {
+            if (w.state === 'installed' && navigator.serviceWorker.controller) {
+              toast('🔄 Bob updated — reload to get latest', '');
+            }
+          });
+        });
+        // Listen for sync messages from SW
+        navigator.serviceWorker.addEventListener('message', e => {
+          if (e.data?.type === 'SYNC_REQUESTED') manualRefresh();
+        });
+      })
+      .catch(e => console.warn('SW registration failed:', e));
+  });
+}
+
+// ─────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────
+loadItems();
+renderAll();
+updateTabTitle();
+setSyncStatus(!!localStorage.getItem(SYNC_KEY));
+loadInitiatives();
+tryAutoImport(false);
+startCountdown();
+initFirebase();
+</script>
+</body>
+</html>

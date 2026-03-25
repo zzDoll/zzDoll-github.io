@@ -1,0 +1,36 @@
+{
+  "name": "Bob — Priority Hub",
+  "short_name": "Bob",
+  "description": "Bob's your uncle. Task and project hub for Steve Doll.",
+  "start_url": "./bob.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#6366f1",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    {
+      "src": "bob-logo.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Add Task",
+      "short_name": "Task",
+      "description": "Jump straight to adding a task",
+      "url": "./bob.html#add-task",
+      "icons": [{ "src": "bob-logo.png", "sizes": "any" }]
+    },
+    {
+      "name": "Delegated",
+      "short_name": "Delegate",
+      "description": "Open the Delegated list",
+      "url": "./delegate.html",
+      "icons": [{ "src": "bob-logo.png", "sizes": "any" }]
+    }
+  ]
+}

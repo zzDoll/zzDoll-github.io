@@ -462,9 +462,69 @@
     .modal-footer { display:flex; justify-content:flex-end; gap:8px; }
     .modal-cancel { padding:7px 14px; border:1.5px solid #e1e5eb; border-radius:7px; background:#fff; cursor:pointer; font-size:13px; color:#6b7280; }
     .modal-cancel:hover { background:#f9fafb; }
+
+    /* ── PASSWORD GATE ── */
+    #pwGate {
+      position:fixed; inset:0; z-index:9999;
+      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+      display:flex; align-items:center; justify-content:center;
+    }
+    #pwBox {
+      background:#fff; border-radius:16px; padding:40px 48px;
+      box-shadow: 0 24px 64px rgba(0,0,0,.35);
+      display:flex; flex-direction:column; align-items:center; gap:20px;
+      min-width:320px;
+    }
+    #pwBox img { width:96px; height:96px; object-fit:contain; border-radius:12px; }
+    #pwBox h2 { font-size:22px; font-weight:700; color:#1e1b4b; margin:0; }
+    #pwBox p  { font-size:13px; color:#6b7280; margin:0; }
+    #pwInput {
+      width:100%; padding:10px 14px; border:2px solid #e1e5eb; border-radius:8px;
+      font-size:15px; text-align:center; letter-spacing:2px;
+    }
+    #pwInput:focus { outline:none; border-color:#6366f1; }
+    #pwBtn {
+      width:100%; padding:11px; background:#6366f1; color:#fff;
+      border:none; border-radius:8px; font-size:15px; font-weight:600;
+      cursor:pointer; transition:background .15s;
+    }
+    #pwBtn:hover { background:#4f46e5; }
+    #pwErr { color:#ef4444; font-size:12px; display:none; }
   </style>
 </head>
 <body>
+
+<!-- ── PASSWORD GATE OVERLAY ── -->
+<div id="pwGate">
+  <div id="pwBox">
+    <img src="bob-logo.png" alt="Bob" />
+    <h2>Bob</h2>
+    <p>Enter password to continue</p>
+    <input id="pwInput" type="password" placeholder="Password"
+      onkeydown="if(event.key==='Enter')checkPw()" autofocus />
+    <div id="pwErr">Wrong password — try again</div>
+    <button id="pwBtn" onclick="checkPw()">Unlock</button>
+  </div>
+</div>
+<script>
+  (function(){
+    const KEY = 'bob_auth_v1';
+    if (localStorage.getItem(KEY) === '1') {
+      document.getElementById('pwGate').style.display = 'none';
+    }
+  })();
+  function checkPw() {
+    const val = document.getElementById('pwInput').value;
+    if (val === 'Protection4Bob') {
+      localStorage.setItem('bob_auth_v1','1');
+      document.getElementById('pwGate').style.display = 'none';
+    } else {
+      document.getElementById('pwErr').style.display = 'block';
+      document.getElementById('pwInput').value = '';
+      document.getElementById('pwInput').focus();
+    }
+  }
+</script>
 
 <!-- ═══════════════════════════════════════════
      HEADER

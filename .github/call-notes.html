@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Call Notes — Bob</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Bob" />
+  <meta name="theme-color" content="#065f46" />
+  <link rel="apple-touch-icon" href="bob-logo.png" />
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f0f2f5; --card: #ffffff; --border: #e1e5eb;
+      --text: #1a1d23; --muted: #6b7280; --accent: #059669;
+      --sidebar-bg: #064e3b; --sidebar-w: 220px;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg); color: var(--text); min-height: 100vh;
+      display: grid; grid-template-columns: var(--sidebar-w) 1fr; grid-template-rows: 56px 1fr; }
+
+    /* ── HEADER ── */
+    .header { grid-column: 1/-1; grid-row: 1;
+      background: var(--card); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 14px; padding: 0 20px;
+      box-shadow: 0 1px 6px rgba(0,0,0,.07); z-index: 100; }
+    .header-logo { font-size: 22px; }
+    .header-title { font-size: 16px; font-weight: 700; }
+    .header-sub { font-size: 12px; color: var(--muted); }
+    .header-nav { margin-left: auto; display: flex; gap: 8px; }
+    .nav-link { font-size: 12px; font-weight: 600; padding: 5px 12px;
+      border: 1.5px solid var(--border); border-radius: 8px; text-decoration: none;
+      color: var(--muted); transition: all .15s; }
+    .nav-link:hover { border-color: var(--accent); color: var(--accent); }
+    .nav-link.active { border-color: var(--accent); color: var(--accent); background: #ecfdf5; }
+
+    /* ── SIDEBAR ── */
+    .sidebar { grid-column: 1; grid-row: 2;
+      background: var(--sidebar-bg); color: white;
+      overflow-y: auto; padding: 16px 0; }
+    .sidebar-hdr { font-size: 10px; font-weight: 700; letter-spacing: .08em;
+      color: #6ee7b7; text-transform: uppercase; padding: 0 16px 10px; }
+    .contact-btn { display: flex; align-items: center; gap: 10px;
+      width: 100%; padding: 10px 16px; border: none; background: none;
+      cursor: pointer; color: #d1fae5; font-size: 13px; text-align: left;
+      transition: background .12s; border-left: 3px solid transparent; }
+    .contact-btn:hover { background: rgba(255,255,255,.08); }
+    .contact-btn.active { background: rgba(255,255,255,.13); border-left-color: #6ee7b7; color: white; }
+    .contact-avatar { width: 30px; height: 30px; border-radius: 50%;
+      background: #065f46; display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; flex-shrink: 0; }
+    .contact-info { flex: 1; min-width: 0; }
+    .contact-name { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .contact-role { font-size: 10px; color: #6ee7b7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .contact-cnt { font-size: 10px; color: #6ee7b7; background: rgba(0,0,0,.3);
+      border-radius: 10px; padding: 1px 6px; flex-shrink: 0; }
+    .sidebar-sep { height: 1px; background: rgba(255,255,255,.1); margin: 12px 16px; }
+    .add-contact-btn { display: flex; align-items: center; gap: 8px;
+      width: 100%; padding: 9px 16px; border: none; background: none;
+      cursor: pointer; color: #6ee7b7; font-size: 12px; }
+    .add-contact-btn:hover { color: white; }
+
+    /* ── MAIN CONTENT ── */
+    .main { grid-column: 2; grid-row: 2; overflow-y: auto; padding: 24px; }
+    .contact-panel { max-width: 780px; }
+    .contact-header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+    .contact-big-avatar { width: 52px; height: 52px; border-radius: 50%;
+      background: linear-gradient(135deg, #059669, #047857);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; font-weight: 700; color: white; flex-shrink: 0; }
+    .contact-big-name { font-size: 20px; font-weight: 700; }
+    .contact-big-email { font-size: 13px; color: var(--muted); }
+    .email-btn { margin-left: auto; padding: 7px 14px; border-radius: 8px;
+      background: var(--accent); color: white; border: none; cursor: pointer;
+      font-size: 12px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
+    .email-btn:hover { background: #047857; }
+
+    /* ── TOPIC CARDS ── */
+    .section-title { font-size: 12px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--muted); margin-bottom: 10px; }
+    .topics-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+    .topic-item { display: flex; align-items: flex-start; gap: 10px;
+      background: var(--card); border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 10px 12px; transition: border-color .15s; }
+    .topic-item:hover { border-color: #6ee7b7; }
+    .topic-item.done-topic { opacity: .55; }
+    .topic-check { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid #d1d5db;
+      cursor: pointer; flex-shrink: 0; margin-top: 1px; display: flex; align-items: center; justify-content: center; }
+    .topic-check.checked { background: var(--accent); border-color: var(--accent); color: white; font-size: 10px; }
+    .topic-text { flex: 1; font-size: 13px; line-height: 1.5; outline: none; }
+    .topic-text[contenteditable]:focus { outline: none; }
+    .topic-remove { font-size: 12px; color: #d1d5db; cursor: pointer; padding: 2px 5px;
+      border-radius: 4px; border: none; background: none; }
+    .topic-remove:hover { color: #ef4444; background: #fee2e2; }
+    .add-topic-row { display: flex; gap: 8px; align-items: center; }
+    .add-topic-input { flex: 1; padding: 9px 12px; border: 1.5px solid var(--border);
+      border-radius: 8px; font-size: 13px; background: var(--card); }
+    .add-topic-input:focus { outline: none; border-color: var(--accent); }
+    .add-topic-btn { padding: 9px 16px; background: var(--accent); color: white;
+      border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; }
+    .add-topic-btn:hover { background: #047857; }
+
+    /* ── CALL LOG ── */
+    .call-log-area { width: 100%; min-height: 100px; padding: 10px 12px;
+      border: 1.5px solid var(--border); border-radius: 8px; font-size: 13px;
+      line-height: 1.6; resize: vertical; font-family: inherit; background: var(--card);
+      margin-bottom: 8px; }
+    .call-log-area:focus { outline: none; border-color: var(--accent); }
+    .log-save-btn { padding: 7px 16px; background: var(--accent); color: white;
+      border: none; border-radius: 7px; cursor: pointer; font-size: 12px; font-weight: 600; }
+
+    /* ── OPEN AREA ── */
+    .open-panel { max-width: 780px; }
+    .open-name-row { display: flex; gap: 8px; margin-bottom: 12px; }
+    .open-name-input { padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 13px; flex: 1; }
+    .open-name-input:focus { outline: none; border-color: var(--accent); }
+    .add-open-btn { padding: 9px 16px; background: var(--accent); color: white;
+      border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; }
+
+    /* ── TOAST ── */
+    .toast-wrap { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 7px; z-index: 999; }
+    .toast { background: #1a1d23; color: white; padding: 9px 14px; border-radius: 9px;
+      font-size: 12.5px; box-shadow: 0 4px 14px rgba(0,0,0,.2); animation: slideIn .2s ease; pointer-events: none; }
+    @keyframes slideIn { from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)} }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <span class="header-logo">📞</span>
+  <div>
+    <div class="header-title">Call Notes</div>
+    <div class="header-sub">Topics & notes for your key contacts</div>
+  </div>
+  <div class="header-nav">
+    <a class="nav-link" href="bob.html">🏠 Bob</a>
+    <a class="nav-link" href="delegate.html">🤝 Delegated</a>
+    <a class="nav-link active" href="call-notes.html">📞 Call Notes</a>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar"></div>
+
+<!-- MAIN -->
+<div class="main" id="mainArea"></div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+// ─────────────────────────────────────────────
+//  DATA
+// ─────────────────────────────────────────────
+const STORE_KEY = 'bob_callnotes_v1';
+const DEFAULT_CONTACTS = [
+  { id: 'nate',    name: 'Nate Price',    email: 'nate.price@subcontractorhub.com',    role: 'SubcontractorHub', initials: 'NP' },
+  { id: 'jessica', name: 'Jessica Brach', email: 'jessica.brach@subcontractorhub.com', role: 'SubcontractorHub', initials: 'JB' },
+  { id: 'saurabh', name: 'Saurabh Garg',  email: 'sgarg@ops-partnersllc.com',          role: 'Ops Partners',     initials: 'SG' },
+  { id: 'justin',  name: 'Justin Brach',  email: 'justin@subcontractorhub.com',         role: 'SubcontractorHub', initials: 'JB2'},
+  { id: 'scott',   name: 'Scott LeDuc',   email: 'sleduc@seamlessenergy.com',           role: 'Seamless Energy',  initials: 'SL' },
+  { id: 'renee',   name: 'Renee Surratt', email: 'rsurratt@subcontractorhub.com',       role: 'SubcontractorHub', initials: 'RS' }
+];
+
+let contacts = [];   // { id, name, email, role, initials }
+let notes    = {};   // { contactId: { topics: [{id,text,done}], log: string } }
+let activeId = null;
+let BOB_DB   = null;
+let pendingSave = false;
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function load() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
+    contacts = raw.contacts || DEFAULT_CONTACTS;
+    notes    = raw.notes    || {};
+    // Ensure every contact has a notes entry
+    contacts.forEach(c => { if (!notes[c.id]) notes[c.id] = { topics: [], log: '' }; });
+  } catch { contacts = DEFAULT_CONTACTS; notes = {}; }
+}
+
+function saveLocal() {
+  localStorage.setItem(STORE_KEY, JSON.stringify({ contacts, notes }));
+}
+
+function save() {
+  saveLocal();
+  if (BOB_DB) {
+    pendingSave = true;
+    const clean = JSON.parse(JSON.stringify({ contacts, notes }));
+    BOB_DB.collection('bob').doc('callnotes').set(
+      { data: clean, lastUpdated: firebase.firestore.FieldValue.serverTimestamp() },
+      { merge: false }
+    ).catch(() => { pendingSave = false; });
+  }
+  renderSidebar();
+  if (activeId) renderMain(activeId);
+}
+
+// ─────────────────────────────────────────────
+//  TOAST
+// ─────────────────────────────────────────────
+function toast(msg) {
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), 2800);
+}
+
+// ─────────────────────────────────────────────
+//  SIDEBAR
+// ─────────────────────────────────────────────
+function renderSidebar() {
+  const sb = document.getElementById('sidebar');
+  let html = `<div class="sidebar-hdr">Key Contacts</div>`;
+  contacts.forEach(c => {
+    const topicCount = (notes[c.id]?.topics || []).filter(t => !t.done).length;
+    html += `
+    <button class="contact-btn ${activeId===c.id?'active':''}" onclick="selectContact('${c.id}')">
+      <div class="contact-avatar">${c.initials}</div>
+      <div class="contact-info">
+        <div class="contact-name">${esc(c.name)}</div>
+        <div class="contact-role">${esc(c.role||'')}</div>
+      </div>
+      ${topicCount ? `<span class="contact-cnt">${topicCount}</span>` : ''}
+    </button>`;
+  });
+  html += `<div class="sidebar-sep"></div>`;
+  html += `<div class="sidebar-hdr" style="margin-top:4px">Open Notes</div>`;
+  html += `<button class="contact-btn ${activeId==='__open__'?'active':''}" onclick="selectContact('__open__')">
+    <div class="contact-avatar">✏️</div>
+    <div class="contact-info"><div class="contact-name">Additional Names</div><div class="contact-role">Open area for other calls</div></div>
+  </button>`;
+  html += `<div class="sidebar-sep"></div>`;
+  html += `<button class="add-contact-btn" onclick="addContact()">＋ Add contact</button>`;
+  sb.innerHTML = html;
+}
+
+function selectContact(id) {
+  activeId = id;
+  renderSidebar();
+  renderMain(id);
+}
+
+// ─────────────────────────────────────────────
+//  MAIN PANEL
+// ─────────────────────────────────────────────
+function renderMain(id) {
+  const main = document.getElementById('mainArea');
+  if (id === '__open__') { renderOpenArea(main); return; }
+  const c = contacts.find(x => x.id === id);
+  if (!c) { main.innerHTML = '<div style="color:#6b7280;padding:20px">Select a contact from the sidebar</div>'; return; }
+  const n = notes[c.id] || { topics: [], log: '' };
+
+  const topicsHtml = n.topics.map(t => `
+  <div class="topic-item ${t.done?'done-topic':''}" id="topic-${t.id}">
+    <div class="topic-check ${t.done?'checked':''}" onclick="toggleTopic('${c.id}','${t.id}')">
+      ${t.done ? '✓' : ''}
+    </div>
+    <div class="topic-text" contenteditable="true"
+      onblur="updateTopicText('${c.id}','${t.id}',this.innerText)"
+      >${esc(t.text)}</div>
+    <button class="topic-remove" onclick="removeTopic('${c.id}','${t.id}')">✕</button>
+  </div>`).join('');
+
+  main.innerHTML = `
+  <div class="contact-panel">
+    <div class="contact-header">
+      <div class="contact-big-avatar">${c.initials}</div>
+      <div>
+        <div class="contact-big-name">${esc(c.name)}</div>
+        <div class="contact-big-email">${esc(c.email)}</div>
+      </div>
+      ${c.email ? `<a class="email-btn" href="mailto:${c.email}?subject=Quick call" target="_blank">✉️ Email</a>` : ''}
+    </div>
+
+    <div class="section-title">📌 Topics to discuss</div>
+    <div class="topics-list" id="topicList-${c.id}">${topicsHtml}</div>
+    <div class="add-topic-row">
+      <input class="add-topic-input" id="topicInput-${c.id}" placeholder="Add a topic…" autocomplete="off"
+        onkeydown="if(event.key==='Enter')addTopic('${c.id}')" />
+      <button class="add-topic-btn" onclick="addTopic('${c.id}')">+ Add</button>
+    </div>
+
+    <div style="margin:24px 0 10px">
+      <div class="section-title">📋 Call log & notes</div>
+      <textarea class="call-log-area" id="logArea-${c.id}" placeholder="Notes from your last call, action items, follow-ups…">${esc(n.log||'')}</textarea>
+      <button class="log-save-btn" onclick="saveLog('${c.id}')">Save notes</button>
+    </div>
+  </div>`;
+}
+
+function renderOpenArea(main) {
+  if (!notes['__open__']) notes['__open__'] = { contacts: [] };
+  const openContacts = notes['__open__'].contacts || [];
+
+  let html = `<div class="open-panel">
+    <div style="font-size:20px;font-weight:700;margin-bottom:6px">Additional Calls</div>
+    <div style="font-size:13px;color:#6b7280;margin-bottom:20px">Add any other person and topics you want to discuss</div>`;
+
+  openContacts.forEach((oc, idx) => {
+    const topicsHtml = (oc.topics||[]).map(t => `
+      <div class="topic-item ${t.done?'done-topic':''}">
+        <div class="topic-check ${t.done?'checked':''}" onclick="toggleOpenTopic(${idx},'${t.id}')">
+          ${t.done?'✓':''}
+        </div>
+        <div class="topic-text" contenteditable="true"
+          onblur="updateOpenTopic(${idx},'${t.id}',this.innerText)">${esc(t.text)}</div>
+        <button class="topic-remove" onclick="removeOpenTopic(${idx},'${t.id}')">✕</button>
+      </div>`).join('');
+
+    html += `
+    <div class="contact-panel" style="margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid #e1e5eb">
+      <div class="contact-header" style="margin-bottom:14px">
+        <div class="contact-big-avatar" style="width:36px;height:36px;font-size:14px">${(oc.name||'?').charAt(0).toUpperCase()}</div>
+        <div>
+          <input value="${esc(oc.name||'')}" style="font-size:16px;font-weight:700;border:none;background:none;outline:none;padding:0"
+            onchange="updateOpenName(${idx},this.value)" placeholder="Name" />
+          <input value="${esc(oc.email||'')}" style="font-size:12px;color:#6b7280;border:none;background:none;outline:none;display:block;padding:0"
+            onchange="updateOpenEmail(${idx},this.value)" placeholder="email@example.com" />
+        </div>
+        <button onclick="removeOpenContact(${idx})" style="margin-left:auto;padding:4px 10px;border:1px solid #fee2e2;color:#ef4444;background:none;border-radius:6px;cursor:pointer;font-size:11px">Remove</button>
+      </div>
+      <div class="section-title">Topics</div>
+      <div class="topics-list">${topicsHtml}</div>
+      <div class="add-topic-row">
+        <input class="add-topic-input" id="openTopicInput-${idx}" placeholder="Add a topic…" autocomplete="off"
+          onkeydown="if(event.key==='Enter')addOpenTopic(${idx})" />
+        <button class="add-topic-btn" onclick="addOpenTopic(${idx})">+ Add</button>
+      </div>
+    </div>`;
+  });
+
+  html += `
+  <div class="open-name-row" style="margin-top:10px">
+    <input class="open-name-input" id="newOpenName"  placeholder="Name" autocomplete="off" />
+    <input class="open-name-input" id="newOpenEmail" placeholder="Email (optional)" type="email" />
+    <button class="add-open-btn" onclick="addOpenContact()">+ Add person</button>
+  </div></div>`;
+
+  main.innerHTML = html;
+}
+
+// ─────────────────────────────────────────────
+//  TOPIC OPERATIONS (keyed contacts)
+// ─────────────────────────────────────────────
+function addTopic(cid) {
+  const inp = document.getElementById(`topicInput-${cid}`);
+  const text = inp.value.trim();
+  if (!text) return;
+  if (!notes[cid]) notes[cid] = { topics: [], log: '' };
+  notes[cid].topics.push({ id: uid(), text, done: false });
+  inp.value = '';
+  save();
+  toast('Topic added');
+}
+
+function toggleTopic(cid, tid) {
+  const t = notes[cid]?.topics.find(x=>x.id===tid);
+  if (t) { t.done = !t.done; save(); }
+}
+
+function updateTopicText(cid, tid, text) {
+  const t = notes[cid]?.topics.find(x=>x.id===tid);
+  if (t && text.trim()) { t.text = text.trim(); saveLocal(); }
+}
+
+function removeTopic(cid, tid) {
+  if (!notes[cid]) return;
+  notes[cid].topics = notes[cid].topics.filter(x=>x.id!==tid);
+  save();
+}
+
+function saveLog(cid) {
+  const area = document.getElementById(`logArea-${cid}`);
+  if (!notes[cid]) notes[cid] = { topics: [], log: '' };
+  notes[cid].log = area.value;
+  save();
+  toast('Notes saved');
+}
+
+// ─────────────────────────────────────────────
+//  OPEN AREA OPERATIONS
+// ─────────────────────────────────────────────
+function addOpenContact() {
+  const name = document.getElementById('newOpenName').value.trim();
+  if (!name) { alert('Please enter a name.'); return; }
+  const email = document.getElementById('newOpenEmail').value.trim();
+  if (!notes['__open__']) notes['__open__'] = { contacts: [] };
+  notes['__open__'].contacts.push({ id: uid(), name, email, topics: [] });
+  save();
+  toast(`Added ${name}`);
+}
+
+function updateOpenName(idx, val) {
+  const oc = notes['__open__']?.contacts[idx];
+  if (oc) { oc.name = val; saveLocal(); }
+}
+
+function updateOpenEmail(idx, val) {
+  const oc = notes['__open__']?.contacts[idx];
+  if (oc) { oc.email = val; saveLocal(); }
+}
+
+function removeOpenContact(idx) {
+  notes['__open__'].contacts.splice(idx, 1);
+  save();
+}
+
+function addOpenTopic(idx) {
+  const inp = document.getElementById(`openTopicInput-${idx}`);
+  const text = inp.value.trim();
+  if (!text) return;
+  const oc = notes['__open__']?.contacts[idx];
+  if (!oc) return;
+  if (!oc.topics) oc.topics = [];
+  oc.topics.push({ id: uid(), text, done: false });
+  inp.value = '';
+  save();
+}
+
+function toggleOpenTopic(idx, tid) {
+  const oc = notes['__open__']?.contacts[idx];
+  const t = oc?.topics.find(x=>x.id===tid);
+  if (t) { t.done = !t.done; save(); }
+}
+
+function updateOpenTopic(idx, tid, text) {
+  const oc = notes['__open__']?.contacts[idx];
+  const t = oc?.topics.find(x=>x.id===tid);
+  if (t && text.trim()) { t.text = text.trim(); saveLocal(); }
+}
+
+function removeOpenTopic(idx, tid) {
+  const oc = notes['__open__']?.contacts[idx];
+  if (oc) { oc.topics = oc.topics.filter(x=>x.id!==tid); save(); }
+}
+
+// ─────────────────────────────────────────────
+//  ADD CONTACT
+// ─────────────────────────────────────────────
+function addContact() {
+  const name = prompt('Contact name:');
+  if (!name?.trim()) return;
+  const email = prompt('Email address (optional):') || '';
+  const role  = prompt('Role / company (optional):') || '';
+  const id    = uid();
+  const initials = name.trim().split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  contacts.push({ id, name: name.trim(), email: email.trim(), role: role.trim(), initials });
+  notes[id] = { topics: [], log: '' };
+  save();
+  selectContact(id);
+}
+
+// ─────────────────────────────────────────────
+//  ESCAPE HELPER
+// ─────────────────────────────────────────────
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ─────────────────────────────────────────────
+//  FIREBASE SYNC
+// ─────────────────────────────────────────────
+function initFirebase() {
+  const cfg = window.BOB_FIREBASE_CONFIG;
+  if (!cfg || cfg.apiKey === 'PASTE_YOUR_API_KEY_HERE') return;
+  try {
+    const app = firebase.initializeApp(cfg, 'callnotes');
+    BOB_DB = firebase.firestore(app);
+    BOB_DB.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+    BOB_DB.collection('bob').doc('callnotes').onSnapshot(doc => {
+      if (pendingSave) { pendingSave = false; return; }
+      if (!doc.exists) return;
+      const d = doc.data();
+      if (d?.data) {
+        contacts = d.data.contacts || contacts;
+        notes    = d.data.notes    || notes;
+        contacts.forEach(c => { if (!notes[c.id]) notes[c.id] = { topics: [], log: '' }; });
+        saveLocal();
+        renderSidebar();
+        if (activeId) renderMain(activeId);
+      }
+    }, () => {});
+  } catch(e) { console.warn('Firebase init failed:', e); }
+}
+
+// ─────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────
+load();
+renderSidebar();
+// Select first contact by default
+if (contacts.length > 0) selectContact(contacts[0].id);
+initFirebase();
+</script>
+</body>
+</html>
